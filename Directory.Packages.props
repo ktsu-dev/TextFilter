@@ -8,6 +8,6 @@
     <PackageVersion Include="ktsu.FuzzySearch" Version="1.2.9" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.300" />
     <PackageVersion Include="Microsoft.SourceLink.AzureRepos.Git" Version="10.0.300" />
-    <PackageVersion Include="Polyfill" Version="10.5.1" />
+    <PackageVersion Include="Polyfill" Version="10.6.0" />
   </ItemGroup>
 </Project>
