@@ -1,6 +1,6 @@
-## v1.5.10 (patch)
+## v1.5.11 (patch)
 
-Changes since v1.5.9:
+Changes since v1.5.10:
 
-- Add TAGS.md with NuGet package tags ([@matt-edmondson](https://github.com/matt-edmondson))
+- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
