@@ -1,7 +1,8 @@
-## v1.5.19
+## v1.5.20 (patch)
 
 Changes since v1.5.19:
 
+- Bump MSTest.Sdk from 4.3.0 to 4.3.2 ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
 ## v1.5.19 (patch)
 
