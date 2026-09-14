@@ -1,6 +1,6 @@
-## v1.5.47 (patch)
+## v1.5.48 (patch)
 
-Changes since v1.5.46:
+Changes since v1.5.47:
 
-- ci: adopt the consolidated .NET workflow [patch] ([@Claude](https://github.com/Claude))
+- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
