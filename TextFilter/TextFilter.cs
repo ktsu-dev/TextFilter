@@ -92,6 +92,11 @@ public static partial class TextFilter
 
 	private static readonly GlobOptions CaseInsensitiveGlobOptions = new() { Evaluation = { CaseInsensitive = true } };
 
+	// Filter patterns are caller-supplied text, so a pattern with catastrophic backtracking would
+	// otherwise run unbounded on the calling thread. One second is far longer than any legitimate
+	// filter needs and short enough that a pathological one cannot wedge a UI.
+	private static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromSeconds(1);
+
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "Not available in older frameworks")]
 	private static Regex RegexMatchAnything() => new(".*", RegexOptions.Compiled);
 
@@ -390,6 +395,11 @@ public static partial class TextFilter
 	/// <param name="textFilterMatchOptions">The options for matching text filters.</param>
 	/// <param name="caseSensitivity">Whether the match distinguishes uppercase from lowercase.</param>
 	/// <returns><c>true</c> if the text matches the regex filter pattern; otherwise, <c>false</c>.</returns>
+	/// <remarks>
+	/// An invalid pattern matches everything. A pattern that cannot be evaluated within one second —
+	/// catastrophic backtracking, for instance — reports no match for the token that timed out
+	/// rather than throwing, so a caller-supplied pattern cannot hang the calling thread.
+	/// </remarks>
 	public static bool DoesMatchRegex(string text, string filter, TextFilterMatchOptions textFilterMatchOptions, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
 	{
 		Ensure.NotNull(text);
@@ -406,7 +416,7 @@ public static partial class TextFilter
 
 			try
 			{
-				regex = new Regex(filter, regexOptions);
+				regex = new Regex(filter, regexOptions, RegexMatchTimeout);
 			}
 			catch (ArgumentException)
 			{
@@ -422,6 +432,20 @@ public static partial class TextFilter
 			? Enumerable.Any
 			: Enumerable.All;
 
-		return matchFunc(textTokens, textToken => regex.IsMatch(textToken));
+		return matchFunc(textTokens, textToken =>
+		{
+			try
+			{
+				return regex.IsMatch(textToken);
+			}
+			catch (RegexMatchTimeoutException)
+			{
+				// A pattern that cannot be evaluated within the timeout is treated as not matching
+				// this token rather than thrown at the caller. Filtering is a predicate, and a list
+				// that throws mid-keystroke on a pathological pattern is a worse contract than one
+				// that returns nothing for it. This mirrors how an invalid pattern degrades above.
+				return false;
+			}
+		});
 	}
 }

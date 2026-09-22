@@ -609,7 +609,7 @@ public class TextFilterTests
 	{
 		List<string> strings = ["IMG_1.JPG", "IMG_2.PNG", "notes.txt"];
 		List<string> result = [.. TextFilter.Filter(strings, "*.jpg", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive)];
-		CollectionAssert.AreEqual(new List<string> { "IMG_1.JPG" }, result, "Filter should pass the sensitivity through to IsMatch.");
+		Assert.AreSequenceEqual<string>(["IMG_1.JPG"], result, "Filter should pass the sensitivity through to IsMatch.");
 	}
 
 	[TestMethod]
@@ -619,5 +619,30 @@ public class TextFilterTests
 		// ignored here, so both values must agree - and both must agree with today's behaviour.
 		Assert.IsTrue(TextFilter.IsMatch("HELLO", "hello", TextFilterType.Fuzzy, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
 		Assert.IsTrue(TextFilter.IsMatch("HELLO", "hello", TextFilterType.Fuzzy, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+	}
+
+	[TestMethod]
+	public void ACatastrophicallyBacktrackingPatternTimesOutInsteadOfHanging()
+	{
+		// Filter patterns are caller-supplied, so this is the ReDoS shape: (a+)+$ against a run of
+		// 'a' terminated by a non-matching character backtracks exponentially. Without a timeout on
+		// the Regex this call does not return; with one it must come back quickly and report false.
+		string pattern = "(a+)+$";
+		string text = new string('a', 40) + "X";
+
+		System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+		bool result = TextFilter.IsMatch(text, pattern, TextFilterType.Regex, TextFilterMatchOptions.ByWholeString);
+		stopwatch.Stop();
+
+		Assert.IsFalse(result, "A pattern that cannot be evaluated in time should report no match, not throw.");
+		Assert.IsLessThan(15_000, stopwatch.ElapsedMilliseconds, "The match should be bounded by the regex timeout rather than running unbounded.");
+	}
+
+	[TestMethod]
+	public void AnOrdinaryRegexIsUnaffectedByTheTimeout()
+	{
+		// Guards the direction the timeout could have broken: a normal pattern still matches.
+		Assert.IsTrue(TextFilter.IsMatch("hello world", "^hello", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString));
+		Assert.IsFalse(TextFilter.IsMatch("hello world", "^goodbye", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString));
 	}
 }
