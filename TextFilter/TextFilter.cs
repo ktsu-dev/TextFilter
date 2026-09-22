@@ -283,11 +283,11 @@ public static partial class TextFilter
 			return false; // optional tokens were set but text does not contain any optional tokens
 		}
 
-		Func<string, HashSet<string>, bool> requiredMatchFunc = textFilterMatchOptions is TextFilterMatchOptions.ByWordAny
-			? AnyTokenMatchesGlobFilter
-			: AllTokensMatchGlobFilter;
-
-		bool allRequiredMatches = requiredTokens.All(filterToken => requiredMatchFunc(filterToken, textTokens));
+		// A required token asks whether it appears among the text's words, which is the same
+		// question the excluded tokens above ask, so it uses the same function under every match
+		// option. Matching it with AllTokensMatchGlobFilter under ByWordAll would instead demand
+		// that every word in the text match the one required token, which no multi-word text can do.
+		bool allRequiredMatches = requiredTokens.All(filterToken => AnyTokenMatchesGlobFilter(filterToken, textTokens));
 
 		if (!allRequiredMatches)
 		{
