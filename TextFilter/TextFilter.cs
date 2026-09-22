@@ -47,6 +47,26 @@ public enum TextFilterMatchOptions
 	ByWordAny,
 }
 
+/// <summary>
+/// Specifies whether a filter distinguishes uppercase from lowercase characters.
+/// </summary>
+/// <remarks>
+/// Applies to the <see cref="TextFilterType.Glob"/> and <see cref="TextFilterType.Regex"/> filter
+/// types, which are case sensitive by default. <see cref="TextFilterType.Fuzzy"/> matching is
+/// unaffected: it is always case insensitive, and there is no way to make it otherwise.
+/// </remarks>
+public enum TextFilterCaseSensitivity
+{
+	/// <summary>
+	/// Uppercase and lowercase characters are distinct, so <c>*.jpg</c> does not match <c>IMG.JPG</c>.
+	/// </summary>
+	CaseSensitive,
+	/// <summary>
+	/// Uppercase and lowercase characters are equivalent, so <c>*.jpg</c> matches <c>IMG.JPG</c>.
+	/// </summary>
+	CaseInsensitive,
+}
+
 internal enum TextFilterTokenType
 {
 	Optional,
@@ -63,6 +83,14 @@ public static partial class TextFilter
 	private static HashSet<char> RequiredTokenPrefixes { get; } = ['+'];
 	private static ConcurrentDictionary<string, Regex> RegexCache { get; } = [];
 	private static ConcurrentDictionary<string, Glob> GlobCache { get; } = [];
+
+	// Both caches are keyed by pattern text, so the same pattern compiled at two sensitivities would
+	// otherwise collide on the first one cached. The sensitivity is folded into the key rather than
+	// using a tuple key, which netstandard2.0 does not get for free.
+	private static string CacheKey(string pattern, TextFilterCaseSensitivity caseSensitivity) =>
+		caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive ? "i:" + pattern : "s:" + pattern;
+
+	private static readonly GlobOptions CaseInsensitiveGlobOptions = new() { Evaluation = { CaseInsensitive = true } };
 
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "Not available in older frameworks")]
 	private static Regex RegexMatchAnything() => new(".*", RegexOptions.Compiled);
@@ -90,10 +118,11 @@ public static partial class TextFilter
 	/// <param name="filter">The filter pattern.</param>
 	/// <param name="filterType">The type of the filter.</param>
 	/// <param name="textFilterMatchOptions">The options for matching text filters.</param>
+	/// <param name="caseSensitivity">Whether the match distinguishes uppercase from lowercase. Ignored by <see cref="TextFilterType.Fuzzy"/>.</param>
 	/// <returns>A collection of strings that match the filter.</returns>
 	/// <remarks>When using fuzzy matching, the strings are sorted by their match score.</remarks>
-	public static IEnumerable<string> Filter(IEnumerable<string> strings, string filter, TextFilterType filterType = TextFilterType.Glob, TextFilterMatchOptions textFilterMatchOptions = TextFilterMatchOptions.ByWordAny) =>
-		Filter(strings, s => s, filter, filterType, textFilterMatchOptions);
+	public static IEnumerable<string> Filter(IEnumerable<string> strings, string filter, TextFilterType filterType = TextFilterType.Glob, TextFilterMatchOptions textFilterMatchOptions = TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive) =>
+		Filter(strings, s => s, filter, filterType, textFilterMatchOptions, caseSensitivity);
 
 	/// <summary>
 	/// Filters the specified collection of items based on the provided filter and filter type.
@@ -104,9 +133,10 @@ public static partial class TextFilter
 	/// <param name="filter">The filter pattern.</param>
 	/// <param name="filterType">The type of the filter.</param>
 	/// <param name="textFilterMatchOptions">The options for matching text filters.</param>
+	/// <param name="caseSensitivity">Whether the match distinguishes uppercase from lowercase. Ignored by <see cref="TextFilterType.Fuzzy"/>.</param>
 	/// <returns>A collection of items that match the filter.</returns>
 	/// <remarks>When using fuzzy matching, the items are sorted by their match score.</remarks>
-	public static IEnumerable<TItem> Filter<TItem>(IEnumerable<TItem> items, Func<TItem, string> keySelector, string filter, TextFilterType filterType = TextFilterType.Glob, TextFilterMatchOptions textFilterMatchOptions = TextFilterMatchOptions.ByWordAny)
+	public static IEnumerable<TItem> Filter<TItem>(IEnumerable<TItem> items, Func<TItem, string> keySelector, string filter, TextFilterType filterType = TextFilterType.Glob, TextFilterMatchOptions textFilterMatchOptions = TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
 	{
 		Ensure.NotNull(items);
 		Ensure.NotNull(keySelector);
@@ -114,7 +144,7 @@ public static partial class TextFilter
 
 		return items.Select(item =>
 		{
-			bool isMatch = IsMatch(keySelector(item), filter, out int score, filterType, textFilterMatchOptions);
+			bool isMatch = IsMatch(keySelector(item), filter, out int score, filterType, textFilterMatchOptions, caseSensitivity);
 			return (item, isMatch, score);
 		})
 		.Where(t => t.isMatch)
@@ -164,8 +194,9 @@ public static partial class TextFilter
 	/// <param name="score">The score of the match (used with fuzzy matching).</param>
 	/// <param name="filterType">The type of the filter.</param>
 	/// <param name="textFilterMatchOptions">The options for matching text filters.</param>
+	/// <param name="caseSensitivity">Whether the match distinguishes uppercase from lowercase. Ignored by <see cref="TextFilterType.Fuzzy"/>.</param>
 	/// <returns><c>true</c> if the text matches the filter pattern; otherwise, <c>false</c>.</returns>
-	public static bool IsMatch(string text, string filter, out int score, TextFilterType filterType = TextFilterType.Glob, TextFilterMatchOptions textFilterMatchOptions = TextFilterMatchOptions.ByWordAny)
+	public static bool IsMatch(string text, string filter, out int score, TextFilterType filterType = TextFilterType.Glob, TextFilterMatchOptions textFilterMatchOptions = TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
 	{
 		Ensure.NotNull(text);
 		Ensure.NotNull(filter);
@@ -175,8 +206,8 @@ public static partial class TextFilter
 		return string.IsNullOrWhiteSpace(filter)
 			|| filterType switch
 			{
-				TextFilterType.Glob => DoesMatchGlob(text, filter, textFilterMatchOptions),
-				TextFilterType.Regex => DoesMatchRegex(text, filter, textFilterMatchOptions),
+				TextFilterType.Glob => DoesMatchGlob(text, filter, textFilterMatchOptions, caseSensitivity),
+				TextFilterType.Regex => DoesMatchRegex(text, filter, textFilterMatchOptions, caseSensitivity),
 				TextFilterType.Fuzzy => Fuzzy.Contains(text.AsSpan(), filter.AsSpan(), out score),
 				_ => throw new NotImplementedException($"{nameof(TextFilterType)}.{filterType} has not been implemented"),
 			};
@@ -189,9 +220,10 @@ public static partial class TextFilter
 	/// <param name="filter">The filter pattern.</param>
 	/// <param name="filterType">The type of the filter.</param>
 	/// <param name="textFilterMatchOptions">The options for matching text filters.</param>
+	/// <param name="caseSensitivity">Whether the match distinguishes uppercase from lowercase. Ignored by <see cref="TextFilterType.Fuzzy"/>.</param>
 	/// <returns><c>true</c> if the text matches the filter pattern; otherwise, <c>false</c>.</returns>
-	public static bool IsMatch(string text, string filter, TextFilterType filterType = TextFilterType.Glob, TextFilterMatchOptions textFilterMatchOptions = TextFilterMatchOptions.ByWordAny)
-		=> IsMatch(text, filter, out _, filterType, textFilterMatchOptions);
+	public static bool IsMatch(string text, string filter, TextFilterType filterType = TextFilterType.Glob, TextFilterMatchOptions textFilterMatchOptions = TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
+		=> IsMatch(text, filter, out _, filterType, textFilterMatchOptions, caseSensitivity);
 
 	internal static HashSet<string> ExtractTextTokens(string text, TextFilterMatchOptions textFilterMatchOptions)
 	{
@@ -236,8 +268,9 @@ public static partial class TextFilter
 	/// <param name="text">The text to match.</param>
 	/// <param name="filter">The glob filter pattern.</param>
 	/// <param name="textFilterMatchOptions">The options for matching text filters.</param>
+	/// <param name="caseSensitivity">Whether the match distinguishes uppercase from lowercase.</param>
 	/// <returns><c>true</c> if the text matches the glob filter pattern; otherwise, <c>false</c>.</returns>
-	public static bool DoesMatchGlob(string text, string filter, TextFilterMatchOptions textFilterMatchOptions)
+	public static bool DoesMatchGlob(string text, string filter, TextFilterMatchOptions textFilterMatchOptions, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
 	{
 		Ensure.NotNull(text);
 		Ensure.NotNull(filter);
@@ -265,7 +298,7 @@ public static partial class TextFilter
 			optionalTokens = [];
 		}
 
-		bool anyExcludedMatches = excludedTokens.Any(filterToken => AnyTokenMatchesGlobFilter(filterToken, textTokens));
+		bool anyExcludedMatches = excludedTokens.Any(filterToken => AnyTokenMatchesGlobFilter(filterToken, textTokens, caseSensitivity));
 
 		if (anyExcludedMatches)
 		{
@@ -276,16 +309,18 @@ public static partial class TextFilter
 			? Enumerable.Any
 			: Enumerable.All;
 
-		bool anyOptionalMatches = optionalMatchFunc(optionalTokens, filterToken => AnyTokenMatchesGlobFilter(filterToken, textTokens));
+		bool anyOptionalMatches = optionalMatchFunc(optionalTokens, filterToken => AnyTokenMatchesGlobFilter(filterToken, textTokens, caseSensitivity));
 
 		if (optionalTokens.Count != 0 && !anyOptionalMatches)
 		{
 			return false; // optional tokens were set but text does not contain any optional tokens
 		}
 
+		// Lambdas rather than method groups: a method group conversion will not bind the optional
+		// caseSensitivity parameter, so the sensitivity has to be captured explicitly.
 		Func<string, HashSet<string>, bool> requiredMatchFunc = textFilterMatchOptions is TextFilterMatchOptions.ByWordAny
-			? AnyTokenMatchesGlobFilter
-			: AllTokensMatchGlobFilter;
+			? (filterToken, tokens) => AnyTokenMatchesGlobFilter(filterToken, tokens, caseSensitivity)
+			: (filterToken, tokens) => AllTokensMatchGlobFilter(filterToken, tokens, caseSensitivity);
 
 		bool allRequiredMatches = requiredTokens.All(filterToken => requiredMatchFunc(filterToken, textTokens));
 
@@ -302,17 +337,14 @@ public static partial class TextFilter
 	/// </summary>
 	/// <param name="filterToken">The glob filter token.</param>
 	/// <param name="textTokens">The set of text tokens to match against.</param>
+	/// <param name="caseSensitivity">Whether the match distinguishes uppercase from lowercase.</param>
 	/// <returns><c>true</c> if any token matches the glob filter token; otherwise, <c>false</c>.</returns>
-	public static bool AnyTokenMatchesGlobFilter(string filterToken, HashSet<string> textTokens)
+	public static bool AnyTokenMatchesGlobFilter(string filterToken, HashSet<string> textTokens, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
 	{
 		Ensure.NotNull(filterToken);
 		Ensure.NotNull(textTokens);
 
-		if (!GlobCache.TryGetValue(filterToken, out Glob? glob))
-		{
-			glob = Glob.Parse(filterToken);
-			GlobCache.TryAdd(filterToken, glob);
-		}
+		Glob glob = ResolveGlob(filterToken, caseSensitivity);
 
 		return textTokens.Any(glob.IsMatch);
 	}
@@ -322,19 +354,32 @@ public static partial class TextFilter
 	/// </summary>
 	/// <param name="filterToken">The glob filter token.</param>
 	/// <param name="textTokens">The set of text tokens to match against.</param>
+	/// <param name="caseSensitivity">Whether the match distinguishes uppercase from lowercase.</param>
 	/// <returns><c>true</c> if all tokens match the glob filter token; otherwise, <c>false</c>.</returns>
-	public static bool AllTokensMatchGlobFilter(string filterToken, HashSet<string> textTokens)
+	public static bool AllTokensMatchGlobFilter(string filterToken, HashSet<string> textTokens, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
 	{
 		Ensure.NotNull(filterToken);
 		Ensure.NotNull(textTokens);
 
-		if (!GlobCache.TryGetValue(filterToken, out Glob? glob))
-		{
-			glob = Glob.Parse(filterToken);
-			GlobCache.TryAdd(filterToken, glob);
-		}
+		Glob glob = ResolveGlob(filterToken, caseSensitivity);
 
 		return textTokens.All(glob.IsMatch);
+	}
+
+	private static Glob ResolveGlob(string filterToken, TextFilterCaseSensitivity caseSensitivity)
+	{
+		string cacheKey = CacheKey(filterToken, caseSensitivity);
+
+		if (!GlobCache.TryGetValue(cacheKey, out Glob? glob))
+		{
+			glob = caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
+				? Glob.Parse(filterToken, CaseInsensitiveGlobOptions)
+				: Glob.Parse(filterToken);
+
+			GlobCache.TryAdd(cacheKey, glob);
+		}
+
+		return glob;
 	}
 
 	/// <summary>
@@ -343,19 +388,25 @@ public static partial class TextFilter
 	/// <param name="text">The text to match.</param>
 	/// <param name="filter">The regex filter pattern.</param>
 	/// <param name="textFilterMatchOptions">The options for matching text filters.</param>
+	/// <param name="caseSensitivity">Whether the match distinguishes uppercase from lowercase.</param>
 	/// <returns><c>true</c> if the text matches the regex filter pattern; otherwise, <c>false</c>.</returns>
-	public static bool DoesMatchRegex(string text, string filter, TextFilterMatchOptions textFilterMatchOptions)
+	public static bool DoesMatchRegex(string text, string filter, TextFilterMatchOptions textFilterMatchOptions, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
 	{
 		Ensure.NotNull(text);
 		Ensure.NotNull(filter);
 
 		// check if regex is valid
 		HashSet<string> textTokens = ExtractTextTokens(text, textFilterMatchOptions);
-		if (!RegexCache.TryGetValue(filter, out Regex? regex))
+		string cacheKey = CacheKey(filter, caseSensitivity);
+		if (!RegexCache.TryGetValue(cacheKey, out Regex? regex))
 		{
+			RegexOptions regexOptions = caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
+				? RegexOptions.Compiled | RegexOptions.IgnoreCase
+				: RegexOptions.Compiled;
+
 			try
 			{
-				regex = new Regex(filter, RegexOptions.Compiled);
+				regex = new Regex(filter, regexOptions);
 			}
 			catch (ArgumentException)
 			{
@@ -364,7 +415,7 @@ public static partial class TextFilter
 				regex = RegexMatchAnything();
 			}
 
-			RegexCache.TryAdd(filter, regex);
+			RegexCache.TryAdd(cacheKey, regex);
 		}
 
 		Func<IEnumerable<string>, Func<string, bool>, bool> matchFunc = textFilterMatchOptions is TextFilterMatchOptions.ByWordAny

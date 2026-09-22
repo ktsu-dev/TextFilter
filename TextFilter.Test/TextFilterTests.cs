@@ -527,4 +527,97 @@ public class TextFilterTests
 		bool result = TextFilter.DoesMatchGlob("hello world", "-", TextFilterMatchOptions.ByWordAll);
 		Assert.IsTrue(result, "Partial filter with only '-' should return true.");
 	}
+
+	// ---- Case sensitivity (issue #97) ----
+
+	[TestMethod]
+	public void GlobIsCaseSensitiveByDefault()
+	{
+		bool result = TextFilter.IsMatch("IMG_1234.JPG", "*.jpg", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString);
+		Assert.IsFalse(result, "Glob matching should remain case sensitive when no sensitivity is requested.");
+	}
+
+	[TestMethod]
+	public void GlobMatchesAcrossCaseWhenCaseInsensitiveIsRequested()
+	{
+		bool result = TextFilter.IsMatch("IMG_1234.JPG", "*.jpg", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive);
+		Assert.IsTrue(result, "'*.jpg' should match 'IMG_1234.JPG' when case insensitive matching is requested.");
+	}
+
+	[TestMethod]
+	public void GlobCaseInsensitivityAppliesToTheFilterAsWellAsTheText()
+	{
+		bool result = TextFilter.IsMatch("photo.png", "*.PNG", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive);
+		Assert.IsTrue(result, "An uppercase filter should match lowercase text when case insensitive matching is requested.");
+	}
+
+	[TestMethod]
+	public void GlobCaseInsensitivityDoesNotMatchUnrelatedText()
+	{
+		bool result = TextFilter.IsMatch("IMG_1234.PNG", "*.jpg", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive);
+		Assert.IsFalse(result, "Case insensitivity should fold case only, not widen the match to a different extension.");
+	}
+
+	[TestMethod]
+	public void RegexIsCaseSensitiveByDefault()
+	{
+		bool result = TextFilter.IsMatch("IMG_1234.JPG", @".*\.jpg", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString);
+		Assert.IsFalse(result, "Regex matching should remain case sensitive when no sensitivity is requested.");
+	}
+
+	[TestMethod]
+	public void RegexMatchesAcrossCaseWhenCaseInsensitiveIsRequested()
+	{
+		bool result = TextFilter.IsMatch("IMG_1234.JPG", @".*\.jpg", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive);
+		Assert.IsTrue(result, "The sensitivity setting should reach the regex path, not only the glob path.");
+	}
+
+	[TestMethod]
+	public void TheTwoSensitivitiesDoNotCollideInTheGlobCache()
+	{
+		// Both caches are keyed by pattern text. Without the sensitivity in the key, whichever of
+		// these ran first would decide the answer for the other, in whichever order they ran.
+		Assert.IsFalse(TextFilter.IsMatch("A.TXT", "*.txt", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+		Assert.IsTrue(TextFilter.IsMatch("A.TXT", "*.txt", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+
+		// Same check with the insensitive variant cached first, on a pattern used nowhere else, so
+		// the isolation holds in both orders rather than only the one the pair above happens to take.
+		Assert.IsTrue(TextFilter.IsMatch("B.MD", "*.md", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+		Assert.IsFalse(TextFilter.IsMatch("B.MD", "*.md", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+	}
+
+	[TestMethod]
+	public void TheTwoSensitivitiesDoNotCollideInTheRegexCache()
+	{
+		Assert.IsFalse(TextFilter.IsMatch("C.TXT", @".*\.txt", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+		Assert.IsTrue(TextFilter.IsMatch("C.TXT", @".*\.txt", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+	}
+
+	[TestMethod]
+	public void CaseInsensitivityReachesRequiredAndExcludedTokens()
+	{
+		// Required and excluded tokens go through their own call sites, so they need their own guard:
+		// threading the sensitivity into the optional branch alone would leave these two behind.
+		Assert.IsTrue(TextFilter.IsMatch("READ ME", "+read", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity.CaseInsensitive),
+			"A required token should honour case insensitivity.");
+		Assert.IsFalse(TextFilter.IsMatch("READ ME", "-read", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity.CaseInsensitive),
+			"An excluded token should honour case insensitivity.");
+	}
+
+	[TestMethod]
+	public void FilterHonoursCaseInsensitivity()
+	{
+		List<string> strings = ["IMG_1.JPG", "IMG_2.PNG", "notes.txt"];
+		List<string> result = [.. TextFilter.Filter(strings, "*.jpg", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive)];
+		CollectionAssert.AreEqual(new List<string> { "IMG_1.JPG" }, result, "Filter should pass the sensitivity through to IsMatch.");
+	}
+
+	[TestMethod]
+	public void FuzzyMatchingIsAlwaysCaseInsensitive()
+	{
+		// Pins the claim made in TextFilterCaseSensitivity's own docs. The setting is deliberately
+		// ignored here, so both values must agree - and both must agree with today's behaviour.
+		Assert.IsTrue(TextFilter.IsMatch("HELLO", "hello", TextFilterType.Fuzzy, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+		Assert.IsTrue(TextFilter.IsMatch("HELLO", "hello", TextFilterType.Fuzzy, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+	}
 }

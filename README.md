@@ -20,6 +20,7 @@ ktsu.TextFilter is a .NET library that provides methods for filtering text based
 - **Regular Expression Matching**: Filter text using regular expressions.
 - **Fuzzy Matching**: Rank text based on how well it matches a fuzzy pattern.
 - **Customizable Match Options**: Match by whole string, all words, or any word.
+- **Case Sensitivity**: Opt into case-insensitive glob and regex matching; case sensitive by default.
 
 ## Installation
 
@@ -98,6 +99,30 @@ bool allWordsMatch = TextFilter.Match(text, pattern, MatchOptions.AllWords);
 bool wholeStringMatch = TextFilter.Match(text, pattern, MatchOptions.WholeString);
 ```
 
+### Case Sensitivity
+
+Glob and regular expression matching are **case sensitive by default**. Pass
+`TextFilterCaseSensitivity.CaseInsensitive` to fold case on both the text and the pattern:
+
+```csharp
+using ktsu.TextFilter;
+
+// Case sensitive (the default) - a camera writes IMG_1234.JPG, so this does not match
+bool sensitive = TextFilter.IsMatch("IMG_1234.JPG", "*.jpg",
+    TextFilterType.Glob, TextFilterMatchOptions.ByWholeString);                           // false
+
+// Case insensitive
+bool insensitive = TextFilter.IsMatch("IMG_1234.JPG", "*.jpg",
+    TextFilterType.Glob, TextFilterMatchOptions.ByWholeString,
+    TextFilterCaseSensitivity.CaseInsensitive);                                           // true
+```
+
+The setting is available on `IsMatch`, `Filter`, `DoesMatchGlob`, `DoesMatchRegex`,
+`AnyTokenMatchesGlobFilter` and `AllTokensMatchGlobFilter`, and applies to required and excluded
+tokens as well as optional ones.
+
+`TextFilterType.Fuzzy` does not take the setting: fuzzy matching is always case insensitive.
+
 ### Filter Types
 
 TextFilter supports different filter types:
@@ -150,6 +175,13 @@ The primary class for text filtering operations.
 | `Glob` | Use glob pattern matching |
 | `Regex` | Use regular expression matching |
 | `Fuzzy` | Use fuzzy matching |
+
+#### `TextFilterCaseSensitivity`
+
+| Value | Description |
+|-------|-------------|
+| `CaseSensitive` | Uppercase and lowercase are distinct (the default) |
+| `CaseInsensitive` | Uppercase and lowercase are equivalent, for glob and regex matching |
 
 ## Contributing
 
