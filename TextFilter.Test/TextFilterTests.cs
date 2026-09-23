@@ -522,6 +522,27 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	public void DoesMatchGlobWithRequiredTokenByWordAllReturnsTrue()
+	{
+		bool result = TextFilter.DoesMatchGlob("hello world", "hello* +world", TextFilterMatchOptions.ByWordAll);
+		Assert.IsTrue(result, "A required token present among the text's words should return true under ByWordAll.");
+	}
+
+	[TestMethod]
+	public void DoesMatchGlobWithAllRequiredTokensByWordAllReturnsTrue()
+	{
+		bool result = TextFilter.DoesMatchGlob("hello world", "+hello +world", TextFilterMatchOptions.ByWordAll);
+		Assert.IsTrue(result, "Every required token being present should return true under ByWordAll.");
+	}
+
+	[TestMethod]
+	public void DoesMatchGlobWithMissingRequiredTokenByWordAllReturnsFalse()
+	{
+		bool result = TextFilter.DoesMatchGlob("hello world", "hello* +missing", TextFilterMatchOptions.ByWordAll);
+		Assert.IsFalse(result, "A required token absent from the text should still return false under ByWordAll.");
+	}
+
+	[TestMethod]
 	public void DoesMatchGlobHandlesPartialFilter()
 	{
 		bool result = TextFilter.DoesMatchGlob("hello world", "-", TextFilterMatchOptions.ByWordAll);
