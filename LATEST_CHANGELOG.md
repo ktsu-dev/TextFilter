@@ -1,8 +1,6 @@
-## v1.7.0 (minor)
+## v1.7.1 (patch)
 
-Changes since v1.6.0:
+Changes since v1.7.0:
 
-- Merge main into the case-insensitive matching branch ([@Claude](https://github.com/Claude))
-- Bound regex evaluation with a match timeout [patch] ([@Claude](https://github.com/Claude))
-- Let a caller ask for case-insensitive matching [minor] ([@Claude](https://github.com/Claude))
+- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
