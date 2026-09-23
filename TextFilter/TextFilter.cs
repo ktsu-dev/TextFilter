@@ -321,13 +321,11 @@ public static partial class TextFilter
 			return false; // optional tokens were set but text does not contain any optional tokens
 		}
 
-		// Lambdas rather than method groups: a method group conversion will not bind the optional
-		// caseSensitivity parameter, so the sensitivity has to be captured explicitly.
-		Func<string, HashSet<string>, bool> requiredMatchFunc = textFilterMatchOptions is TextFilterMatchOptions.ByWordAny
-			? (filterToken, tokens) => AnyTokenMatchesGlobFilter(filterToken, tokens, caseSensitivity)
-			: (filterToken, tokens) => AllTokensMatchGlobFilter(filterToken, tokens, caseSensitivity);
-
-		bool allRequiredMatches = requiredTokens.All(filterToken => requiredMatchFunc(filterToken, textTokens));
+		// A required token asks whether it appears among the text's words, which is the same
+		// question the excluded tokens above ask, so it uses the same function under every match
+		// option. Matching it with AllTokensMatchGlobFilter under ByWordAll would instead demand
+		// that every word in the text match the one required token, which no multi-word text can do.
+		bool allRequiredMatches = requiredTokens.All(filterToken => AnyTokenMatchesGlobFilter(filterToken, textTokens, caseSensitivity));
 
 		if (!allRequiredMatches)
 		{

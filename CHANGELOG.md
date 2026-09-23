@@ -1,3 +1,32 @@
+## v1.6.0 (minor)
+
+Changes since v1.5.0:
+
+- Match required glob tokens by any word under ByWordAll ([@Claude](https://github.com/Claude))
+- Gate Dependabot auto-merge on CI actually being green ([@Claude](https://github.com/Claude))
+- ci: adopt the consolidated .NET workflow [patch] ([@Claude](https://github.com/Claude))
+- ci: make the SonarQube quality gate opt in [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- ci: adopt the unified dotnet workflow [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- chore: store icon.png in LFS as .gitattributes declares ([@matt-edmondson](https://github.com/matt-edmondson))
+- docs: scope build badge to the default branch ([@matt-edmondson](https://github.com/matt-edmondson))
+- docs: correct README, DESCRIPTION and TAGS metadata ([@matt-edmondson](https://github.com/matt-edmondson))
+- Fix build against ktsu.Sdk 2.27.0 ([@matt-edmondson](https://github.com/matt-edmondson))
+- Stop Update SDKs failing when there is nothing to update ([@matt-edmondson](https://github.com/matt-edmondson))
+- Sync .editorconfig ([@KtsuTools](https://github.com/KtsuTools))
+- Sync global.json ([@KtsuTools](https://github.com/KtsuTools))
+- chore: update ktsu.Sdk to 2.21.1 [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix: remove unnecessary SourceLink package references ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix: add explicit System.Memory package reference ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add TAGS.md with NuGet package tags ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove legacy build scripts ([@matt-edmondson](https://github.com/matt-edmondson))
+- migrate to dotnet 10 ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor TextFilter and update CI/CD workflow; streamline regex handling, improve test cases, and enhance build configuration with optional NuGet and Ktsu package keys. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update .editorconfig, .gitignore, .gitattributes, .mailmap, and .runsettings; modify settings for code style, add SpecStory files to .gitignore, and streamline .runsettings for coverage output. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update package references in TextFilter.csproj ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove obsolete build configuration files and scripts, including Directory.Build.props, Directory.Build.targets, and various PowerShell scripts for metadata and version management. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Enhance README with detailed usage examples and API reference; update project SDK references in .csproj files. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update packages ([@matt-edmondson](https://github.com/matt-edmondson))
+
 ## v1.5.55 (patch)
 
 Changes since v1.5.54:
