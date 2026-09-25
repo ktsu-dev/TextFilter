@@ -123,6 +123,12 @@ tokens as well as optional ones.
 
 `TextFilterType.Fuzzy` does not take the setting: fuzzy matching is always case insensitive.
 
+Case is folded invariantly, so the answer does not depend on the calling thread's `CurrentCulture`.
+That matters for the dotted and dotless I: under a Turkish culture, `i` and `I` are not each other's
+case pair, and a culture-sensitive fold would stop a filter of `img` matching `IMG_1234.JPG` on a
+machine whose locale happens to be `tr-TR`. A filter pattern is machine text rather than prose, so
+it folds the same way everywhere.
+
 ### Filter Types
 
 TextFilter supports different filter types:
