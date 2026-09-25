@@ -84,6 +84,31 @@ public static partial class TextFilter
 	private static ConcurrentDictionary<string, Regex> RegexCache { get; } = [];
 	private static ConcurrentDictionary<string, Glob> GlobCache { get; } = [];
 
+	// Filter patterns are caller-supplied, and in the keystroke-driven filter box this library exists
+	// for, every prefix of what the user types becomes its own key. Unbounded, the caches therefore
+	// grow with everything ever typed for the lifetime of the process, rather than with the size of
+	// the data being filtered.
+	internal const int MaxCacheEntries = 4096;
+
+	internal static int RegexCacheCount => RegexCache.Count;
+
+	internal static int GlobCacheCount => GlobCache.Count;
+
+	// Clear-and-restart rather than LRU: ConcurrentDictionary keeps no eviction order, and tracking
+	// one would put a write on every cache *hit* — the path the cache exists to keep cheap. This
+	// only ever runs on a miss, where a compile is about to happen anyway, so the Count (which does
+	// take the dictionary's locks) is off the hot path. At this cap a reset is rare, and costs one
+	// recompile per pattern still in use.
+	private static void AddBounded<TValue>(ConcurrentDictionary<string, TValue> cache, string cacheKey, TValue value)
+	{
+		if (cache.Count >= MaxCacheEntries)
+		{
+			cache.Clear();
+		}
+
+		cache.TryAdd(cacheKey, value);
+	}
+
 	// Both caches are keyed by pattern text, so the same pattern compiled at two sensitivities would
 	// otherwise collide on the first one cached. The sensitivity is folded into the key rather than
 	// using a tuple key, which netstandard2.0 does not get for free.
@@ -379,7 +404,7 @@ public static partial class TextFilter
 				? Glob.Parse(filterToken, CaseInsensitiveGlobOptions)
 				: Glob.Parse(filterToken);
 
-			GlobCache.TryAdd(cacheKey, glob);
+			AddBounded(GlobCache, cacheKey, glob);
 		}
 
 		return glob;
@@ -423,7 +448,7 @@ public static partial class TextFilter
 				regex = RegexMatchAnything();
 			}
 
-			RegexCache.TryAdd(cacheKey, regex);
+			AddBounded(RegexCache, cacheKey, regex);
 		}
 
 		Func<IEnumerable<string>, Func<string, bool>, bool> matchFunc = textFilterMatchOptions is TextFilterMatchOptions.ByWordAny
