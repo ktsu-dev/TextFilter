@@ -771,4 +771,25 @@ public class TextFilterTests
 			"A pattern evicted by the bound should simply be recompiled, not answer differently.");
 		Assert.IsFalse(TextFilter.IsMatch("hello world", "^goodbye", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString));
 	}
+
+	[TestMethod]
+	[DataRow("file[0-")]
+	[DataRow("[a-")]
+	[DataRow("a[b-")]
+	[DataRow("[!a-")]
+	[DataRow("*[0-")]
+	[DataRow("[a-]")]
+	public void GlobWithAHalfTypedRangeDoesNotThrow(string pattern)
+	{
+		// DotNet.Glob's tokeniser throws IndexOutOfRangeException on a range left open after the dash,
+		// which every type-ahead filter passes through while the user types "file[0-9].txt". An
+		// unparseable token degrades to match-anything, as an invalid regex already does.
+		foreach (TextFilterCaseSensitivity caseSensitivity in new[] { TextFilterCaseSensitivity.CaseSensitive, TextFilterCaseSensitivity.CaseInsensitive })
+		{
+			Assert.IsTrue(TextFilter.IsMatch("file1.txt", pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity));
+			CollectionAssert.AreEqual(
+				new List<string> { "file1.txt" },
+				TextFilter.Filter(["file1.txt"], pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity).ToList());
+		}
+	}
 }
