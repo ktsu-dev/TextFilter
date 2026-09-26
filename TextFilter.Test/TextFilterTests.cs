@@ -3,6 +3,7 @@
 namespace TextFilter.Test;
 
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using ktsu.TextFilter;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -605,6 +606,61 @@ public class TextFilterTests
 		// the isolation holds in both orders rather than only the one the pair above happens to take.
 		Assert.IsTrue(TextFilter.IsMatch("B.MD", "*.md", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
 		Assert.IsFalse(TextFilter.IsMatch("B.MD", "*.md", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+	}
+
+	[TestMethod]
+	public void RegexCaseInsensitivityDoesNotDependOnTheCurrentCulture()
+	{
+		// Turkish folds "i" to "İ" and "I" to "ı", so IgnoreCase without CultureInvariant stops
+		// treating "i" and "I" as the same letter. Only a pattern containing that letter shows it:
+		// ".*\.jpg" matches "IMG_1234.JPG" across case under tr-TR perfectly well, which is why the
+		// case-insensitivity tests above never caught this.
+		CultureInfo original = CultureInfo.CurrentCulture;
+		try
+		{
+			CultureInfo.CurrentCulture = new CultureInfo("tr-TR");
+
+			// The premise, stated rather than assumed: under globalization-invariant mode this
+			// culture request silently resolves to the invariant culture, and the assertion below
+			// would then pass without ever exercising the fold it is about.
+			if (CultureInfo.CurrentCulture.TextInfo.ToUpper("i") == "I")
+			{
+				Assert.Inconclusive("This runtime does not apply Turkish case mapping, so the regression cannot be provoked here.");
+			}
+
+			Assert.IsTrue(
+				TextFilter.IsMatch("IMG_5678.JPG", "img", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive),
+				"A case-insensitive filter should fold i and I whatever locale the calling thread runs under.");
+		}
+		finally
+		{
+			CultureInfo.CurrentCulture = original;
+		}
+	}
+
+	[TestMethod]
+	public void ARegexCompiledUnderOneCultureAnswersTheSameUnderAnother()
+	{
+		// The cache is keyed by pattern and sensitivity, not by culture, so a culture-dependent fold
+		// is not merely wrong under tr-TR -- it leaks. Whichever culture compiled the pattern first
+		// decides the answer for every later caller on every thread. A pattern used nowhere else, so
+		// this owns its cache entry and the ordering below is the one that actually runs.
+		CultureInfo original = CultureInfo.CurrentCulture;
+		try
+		{
+			CultureInfo.CurrentCulture = new CultureInfo("tr-TR");
+			bool underTurkish = TextFilter.IsMatch("MINI.TXT", "mini", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive);
+
+			CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+			bool underInvariant = TextFilter.IsMatch("MINI.TXT", "mini", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive);
+
+			Assert.IsTrue(underTurkish, "The first caller's culture should not decide the answer.");
+			Assert.AreEqual(underTurkish, underInvariant, "A cached pattern should answer the same for every caller.");
+		}
+		finally
+		{
+			CultureInfo.CurrentCulture = original;
+		}
 	}
 
 	[TestMethod]

@@ -408,8 +408,14 @@ public static partial class TextFilter
 		string cacheKey = CacheKey(filter, caseSensitivity);
 		if (!RegexCache.TryGetValue(cacheKey, out Regex? regex))
 		{
+			// CultureInvariant, because IgnoreCase alone folds case using the thread's CurrentCulture.
+			// Under tr-TR that stops "i" and "I" being the same letter, so a filter of "img" no longer
+			// matches "IMG_1234.JPG" -- and the cache below is keyed by pattern and sensitivity only,
+			// so whichever culture happened to compile the pattern first decides the answer for every
+			// later caller on any thread. A filter pattern is machine text, not prose, and the glob
+			// path already folds invariantly, so the two paths now agree.
 			RegexOptions regexOptions = caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
-				? RegexOptions.Compiled | RegexOptions.IgnoreCase
+				? RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
 				: RegexOptions.Compiled;
 
 			try
