@@ -812,4 +812,30 @@ public class TextFilterTests
 				TextFilter.Filter(items, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity).ToList());
 		}
 	}
+
+	[TestMethod]
+	[DataRow("", TextFilterType.Regex)]
+	[DataRow("   ", TextFilterType.Regex)]
+	[DataRow("", TextFilterType.Glob)]
+	[DataRow("   ", TextFilterType.Glob)]
+	public void ByWordAllDoesNotMatchTextWithNoWords(string text, TextFilterType filterType)
+	{
+		// Blank text splits into no words, and All over nothing is vacuously true, so the regex path
+		// used to match it against every pattern while the glob path did not. Both now agree.
+		Assert.IsFalse(TextFilter.IsMatch(text, "zzz", filterType, TextFilterMatchOptions.ByWordAll));
+		CollectionAssert.AreEqual(
+			new List<string>(),
+			TextFilter.Filter([text], "zzz", filterType, TextFilterMatchOptions.ByWordAll).ToList());
+	}
+
+	[TestMethod]
+	public void RegexByWordAllFilterDropsBlankEntries()
+	{
+		CollectionAssert.AreEqual(
+			new List<string>(),
+			TextFilter.Filter(["", "hello"], "zzz", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll).ToList());
+		CollectionAssert.AreEqual(
+			new List<string> { "hello" },
+			TextFilter.Filter(["", "hello"], "hel", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll).ToList());
+	}
 }

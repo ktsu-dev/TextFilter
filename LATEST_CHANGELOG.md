@@ -1,6 +1,7 @@
-## v1.7.5 (patch)
+## v1.7.6 (patch)
 
-Changes since v1.7.4:
+Changes since v1.7.5:
 
-- Stop half-typed glob ranges from throwing [patch] ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into fix/regex-bywordall-empty-text-107 ([@Claude](https://github.com/Claude))
+- Stop regex ByWordAll matching blank text [patch] ([@Claude](https://github.com/Claude))
 
