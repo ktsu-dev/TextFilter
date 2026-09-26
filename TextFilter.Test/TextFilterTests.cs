@@ -779,17 +779,37 @@ public class TextFilterTests
 	[DataRow("[!a-")]
 	[DataRow("*[0-")]
 	[DataRow("[a-]")]
+	[DataRow("-file[0-")]
+	[DataRow("!file[0-")]
+	[DataRow("^file[0-")]
 	public void GlobWithAHalfTypedRangeDoesNotThrow(string pattern)
 	{
 		// DotNet.Glob's tokeniser throws IndexOutOfRangeException on a range left open after the dash,
 		// which every type-ahead filter passes through while the user types "file[0-9].txt". An
-		// unparseable token degrades to match-anything, as an invalid regex already does.
+		// unparseable token is ignored: plain and required tokens match anything, excluded ones exclude nothing.
 		foreach (TextFilterCaseSensitivity caseSensitivity in new[] { TextFilterCaseSensitivity.CaseSensitive, TextFilterCaseSensitivity.CaseInsensitive })
 		{
 			Assert.IsTrue(TextFilter.IsMatch("file1.txt", pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity));
 			CollectionAssert.AreEqual(
 				new List<string> { "file1.txt" },
 				TextFilter.Filter(["file1.txt"], pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity).ToList());
+		}
+	}
+
+	[TestMethod]
+	[DataRow("-readme[a-")]
+	[DataRow("!readme[a-")]
+	[DataRow("^readme[a-")]
+	public void ExcludedGlobWithAHalfTypedRangeExcludesNothing(string pattern)
+	{
+		// An unparseable excluded token is ignored while the user finishes typing it. Treating it as
+		// match-anything, as unprefixed tokens are, would exclude every item on each keystroke.
+		List<string> items = ["file1.txt", "file2.txt", "readme.md"];
+		foreach (TextFilterCaseSensitivity caseSensitivity in new[] { TextFilterCaseSensitivity.CaseSensitive, TextFilterCaseSensitivity.CaseInsensitive })
+		{
+			CollectionAssert.AreEqual(
+				items,
+				TextFilter.Filter(items, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity).ToList());
 		}
 	}
 

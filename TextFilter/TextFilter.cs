@@ -82,7 +82,8 @@ public static partial class TextFilter
 	private static HashSet<char> ExcludedTokenPrefixes { get; } = ['!', '-', '^'];
 	private static HashSet<char> RequiredTokenPrefixes { get; } = ['+'];
 	private static ConcurrentDictionary<string, Regex> RegexCache { get; } = [];
-	private static ConcurrentDictionary<string, Glob> GlobCache { get; } = [];
+	// A null entry records a token that could not be parsed, so the parse is not retried on every keystroke.
+	private static ConcurrentDictionary<string, Glob?> GlobCache { get; } = [];
 
 	// Filter patterns are caller-supplied, and in the keystroke-driven filter box this library exists
 	// for, every prefix of what the user types becomes its own key. Unbounded, the caches therefore
@@ -124,8 +125,6 @@ public static partial class TextFilter
 
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "Not available in older frameworks")]
 	private static Regex RegexMatchAnything() => new(".*", RegexOptions.Compiled);
-
-	private static Glob GlobMatchAnything() => Glob.Parse("*");
 
 	/// <summary>
 	/// Gets a hint for the specified filter type.
@@ -303,8 +302,9 @@ public static partial class TextFilter
 	/// <param name="caseSensitivity">Whether the match distinguishes uppercase from lowercase.</param>
 	/// <returns><c>true</c> if the text matches the glob filter pattern; otherwise, <c>false</c>.</returns>
 	/// <remarks>
-	/// A token that cannot be parsed as a glob, such as the half-typed range <c>file[0-</c>, matches
-	/// everything rather than throwing, the same way an invalid regex pattern does.
+	/// A token that cannot be parsed as a glob, such as the half-typed range <c>file[0-</c>, is ignored
+	/// rather than throwing: as a plain or required token it matches everything, and as an excluded
+	/// token it excludes nothing.
 	/// </remarks>
 	public static bool DoesMatchGlob(string text, string filter, TextFilterMatchOptions textFilterMatchOptions, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
 	{
@@ -334,7 +334,9 @@ public static partial class TextFilter
 			optionalTokens = [];
 		}
 
-		bool anyExcludedMatches = excludedTokens.Any(filterToken => AnyTokenMatchesGlobFilter(filterToken, textTokens, caseSensitivity));
+		// An unparseable excluded token is skipped rather than treated as match-anything, which here
+		// would exclude every item while the user is still typing the token.
+		bool anyExcludedMatches = excludedTokens.Any(filterToken => ResolveGlob(filterToken, caseSensitivity) is Glob glob && textTokens.Any(glob.IsMatch));
 
 		if (anyExcludedMatches)
 		{
@@ -378,9 +380,9 @@ public static partial class TextFilter
 		Ensure.NotNull(filterToken);
 		Ensure.NotNull(textTokens);
 
-		Glob glob = ResolveGlob(filterToken, caseSensitivity);
+		Glob? glob = ResolveGlob(filterToken, caseSensitivity);
 
-		return textTokens.Any(glob.IsMatch);
+		return glob is null || textTokens.Any(glob.IsMatch);
 	}
 
 	/// <summary>
@@ -395,12 +397,13 @@ public static partial class TextFilter
 		Ensure.NotNull(filterToken);
 		Ensure.NotNull(textTokens);
 
-		Glob glob = ResolveGlob(filterToken, caseSensitivity);
+		Glob? glob = ResolveGlob(filterToken, caseSensitivity);
 
-		return textTokens.All(glob.IsMatch);
+		return glob is null || textTokens.All(glob.IsMatch);
 	}
 
-	private static Glob ResolveGlob(string filterToken, TextFilterCaseSensitivity caseSensitivity)
+	// Returns null for a token that cannot be parsed, so each caller can decide what ignoring it means.
+	private static Glob? ResolveGlob(string filterToken, TextFilterCaseSensitivity caseSensitivity)
 	{
 		string cacheKey = CacheKey(filterToken, caseSensitivity);
 
@@ -416,10 +419,9 @@ public static partial class TextFilter
 			{
 				// DotNet.Glob's tokeniser throws IndexOutOfRangeException on a range left open after the
 				// dash ("file[0-"), which is ordinary intermediate input while someone types a range into
-				// a filter box. Degrade the way an invalid regex does: match anything, and cache that so
-				// the exception is not raised again on every keystroke. Caught broadly so the next
-				// tokeniser bug is contained too.
-				glob = GlobMatchAnything();
+				// a filter box. Cache it as unparseable so the exception is not raised again on every
+				// keystroke. Caught broadly so the next tokeniser bug is contained too.
+				glob = null;
 			}
 
 			AddBounded(GlobCache, cacheKey, glob);
