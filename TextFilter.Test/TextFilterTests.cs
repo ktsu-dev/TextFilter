@@ -722,4 +722,53 @@ public class TextFilterTests
 		Assert.IsTrue(TextFilter.IsMatch("hello world", "^hello", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString));
 		Assert.IsFalse(TextFilter.IsMatch("hello world", "^goodbye", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString));
 	}
+
+	[TestMethod]
+	public void TheRegexCacheStaysBoundedAsDistinctPatternsArrive()
+	{
+		// The keystroke case from the report: every prefix a user types is a distinct key. Feeding
+		// more distinct patterns than the cap must not leave more than the cap cached.
+		for (int i = 0; i < (TextFilter.MaxCacheEntries * 2); i++)
+		{
+			TextFilter.IsMatch("hello world", $"^p{i}x", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString);
+		}
+
+		Assert.IsLessThanOrEqualTo(
+			TextFilter.MaxCacheEntries,
+			TextFilter.RegexCacheCount,
+			"The regex cache should be bounded, not grow with every pattern ever seen.");
+	}
+
+	[TestMethod]
+	public void TheGlobCacheStaysBoundedAsDistinctPatternsArrive()
+	{
+		for (int i = 0; i < (TextFilter.MaxCacheEntries * 2); i++)
+		{
+			TextFilter.IsMatch("hello world", $"*q{i}z*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString);
+		}
+
+		Assert.IsLessThanOrEqualTo(
+			TextFilter.MaxCacheEntries,
+			TextFilter.GlobCacheCount,
+			"The glob cache should be bounded, not grow with every pattern ever seen.");
+	}
+
+	[TestMethod]
+	public void ACachedPatternStillMatchesAfterTheCacheHasReset()
+	{
+		// Guards the over-correction: a bound that dropped correctness rather than entries. The same
+		// pattern must answer identically before and after enough churn to force a reset.
+		const string pattern = "^hello";
+		Assert.IsTrue(TextFilter.IsMatch("hello world", pattern, TextFilterType.Regex, TextFilterMatchOptions.ByWholeString));
+
+		for (int i = 0; i < (TextFilter.MaxCacheEntries + 1); i++)
+		{
+			TextFilter.IsMatch("hello world", $"^r{i}y", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString);
+		}
+
+		Assert.IsTrue(
+			TextFilter.IsMatch("hello world", pattern, TextFilterType.Regex, TextFilterMatchOptions.ByWholeString),
+			"A pattern evicted by the bound should simply be recompiled, not answer differently.");
+		Assert.IsFalse(TextFilter.IsMatch("hello world", "^goodbye", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString));
+	}
 }
