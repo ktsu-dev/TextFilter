@@ -1,7 +1,6 @@
-## v1.7.4 (patch)
+## v1.7.5 (patch)
 
-Changes since v1.7.3:
+Changes since v1.7.4:
 
-- Bound the regex and glob caches [patch] ([@Claude](https://github.com/Claude))
-- Fold case invariantly in regex matching [patch] ([@Claude](https://github.com/Claude))
+- Stop half-typed glob ranges from throwing [patch] ([@Claude](https://github.com/Claude))
 
