@@ -125,6 +125,8 @@ public static partial class TextFilter
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "Not available in older frameworks")]
 	private static Regex RegexMatchAnything() => new(".*", RegexOptions.Compiled);
 
+	private static Glob GlobMatchAnything() => Glob.Parse("*");
+
 	/// <summary>
 	/// Gets a hint for the specified filter type.
 	/// </summary>
@@ -300,6 +302,10 @@ public static partial class TextFilter
 	/// <param name="textFilterMatchOptions">The options for matching text filters.</param>
 	/// <param name="caseSensitivity">Whether the match distinguishes uppercase from lowercase.</param>
 	/// <returns><c>true</c> if the text matches the glob filter pattern; otherwise, <c>false</c>.</returns>
+	/// <remarks>
+	/// A token that cannot be parsed as a glob, such as the half-typed range <c>file[0-</c>, matches
+	/// everything rather than throwing, the same way an invalid regex pattern does.
+	/// </remarks>
 	public static bool DoesMatchGlob(string text, string filter, TextFilterMatchOptions textFilterMatchOptions, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
 	{
 		Ensure.NotNull(text);
@@ -400,9 +406,21 @@ public static partial class TextFilter
 
 		if (!GlobCache.TryGetValue(cacheKey, out Glob? glob))
 		{
-			glob = caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
-				? Glob.Parse(filterToken, CaseInsensitiveGlobOptions)
-				: Glob.Parse(filterToken);
+			try
+			{
+				glob = caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
+					? Glob.Parse(filterToken, CaseInsensitiveGlobOptions)
+					: Glob.Parse(filterToken);
+			}
+			catch (Exception ex) when (ex is not OutOfMemoryException)
+			{
+				// DotNet.Glob's tokeniser throws IndexOutOfRangeException on a range left open after the
+				// dash ("file[0-"), which is ordinary intermediate input while someone types a range into
+				// a filter box. Degrade the way an invalid regex does: match anything, and cache that so
+				// the exception is not raised again on every keystroke. Caught broadly so the next
+				// tokeniser bug is contained too.
+				glob = GlobMatchAnything();
+			}
 
 			AddBounded(GlobCache, cacheKey, glob);
 		}
