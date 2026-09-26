@@ -1,7 +1,7 @@
-## v1.7.6 (patch)
+## v1.7.7 (patch)
 
-Changes since v1.7.5:
+Changes since v1.7.6:
 
-- Merge remote-tracking branch 'origin/main' into fix/regex-bywordall-empty-text-107 ([@Claude](https://github.com/Claude))
-- Stop regex ByWordAll matching blank text [patch] ([@Claude](https://github.com/Claude))
+- Merge main into claude/textfilter-110-excluded-halftyped-glob ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix: stop a half-typed excluded glob token hiding every item [patch] ([@Claude](https://github.com/Claude))
 
