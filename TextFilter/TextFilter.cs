@@ -475,6 +475,14 @@ public static partial class TextFilter
 			AddBounded(RegexCache, cacheKey, regex);
 		}
 
+		// Text with no words -- "" or "   " split by word -- has nothing for the pattern to match.
+		// Without this, Enumerable.All over the empty set is vacuously true, so under ByWordAll blank
+		// text matched every pattern while the glob path reported no match for the same input.
+		if (textTokens.Count == 0)
+		{
+			return false;
+		}
+
 		Func<IEnumerable<string>, Func<string, bool>, bool> matchFunc = textFilterMatchOptions is TextFilterMatchOptions.ByWordAny
 			? Enumerable.Any
 			: Enumerable.All;
