@@ -683,6 +683,35 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	public void AnInlineIgnoreCaseFoldsTheSameWhateverCultureCompiledIt()
+	{
+		// Under CaseSensitive the pattern can still ask for a fold itself with (?i), and that fold is
+		// culture-dependent unless CultureInvariant is set. Compiled under tr-TR first, "(?i)img" would
+		// then miss "IMG_1234.JPG" for every later caller, because the cache keeps the first compile.
+		CultureInfo original = CultureInfo.CurrentCulture;
+		try
+		{
+			CultureInfo.CurrentCulture = new CultureInfo("tr-TR");
+			if (CultureInfo.CurrentCulture.TextInfo.ToUpper("i") == "I")
+			{
+				Assert.Inconclusive("This runtime does not apply Turkish case mapping, so the regression cannot be provoked here.");
+			}
+
+			bool underTurkish = TextFilter.IsMatch("IMG_1234.JPG", "(?i)img", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString);
+
+			CultureInfo.CurrentCulture = new CultureInfo("en-US");
+			bool underEnglish = TextFilter.IsMatch("IMG_1234.JPG", "(?i)img", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString);
+
+			Assert.IsTrue(underTurkish, "An inline (?i) should fold i and I whatever locale compiled the pattern.");
+			Assert.IsTrue(underEnglish, "The first caller's culture should not decide the answer for later callers.");
+		}
+		finally
+		{
+			CultureInfo.CurrentCulture = original;
+		}
+	}
+
+	[TestMethod]
 	public void TheTwoSensitivitiesDoNotCollideInTheRegexCache()
 	{
 		Assert.IsFalse(TextFilter.IsMatch("C.TXT", @".*\.txt", TextFilterType.Regex, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));

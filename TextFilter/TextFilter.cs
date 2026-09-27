@@ -458,10 +458,12 @@ public static partial class TextFilter
 			// matches "IMG_1234.JPG" -- and the cache below is keyed by pattern and sensitivity only,
 			// so whichever culture happened to compile the pattern first decides the answer for every
 			// later caller on any thread. A filter pattern is machine text, not prose, and the glob
-			// path already folds invariantly, so the two paths now agree.
+			// path already folds invariantly, so the two paths now agree. It applies under CaseSensitive
+			// too, because the pattern itself can ask for a fold with an inline (?i), and that fold is
+			// just as culture-dependent and just as cached as the one the option asks for.
 			RegexOptions regexOptions = caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
 				? RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
-				: RegexOptions.Compiled;
+				: RegexOptions.Compiled | RegexOptions.CultureInvariant;
 
 			try
 			{
