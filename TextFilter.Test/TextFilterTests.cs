@@ -838,4 +838,23 @@ public class TextFilterTests
 			new List<string> { "hello" },
 			TextFilter.Filter(["", "hello"], "hel", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll).ToList());
 	}
+
+	[TestMethod]
+	public void GlobByWholeStringNeedsOnlyOneOptionalTokenToMatch()
+	{
+		// The glob hint promises "one of the optional tokens". ByWholeString used to require all of
+		// them, so a filter of alternatives such as extension globs matched nothing at all.
+		Assert.IsTrue(TextFilter.IsMatch("photo.jpg", "*.jpg *.png", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsFalse(TextFilter.IsMatch("notes.txt", "*.jpg *.png", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		CollectionAssert.AreEqual(
+			new List<string> { "a.jpg", "b.png" },
+			TextFilter.Filter(["a.jpg", "b.png", "c.txt"], "*.jpg *.png", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString).ToList());
+	}
+
+	[TestMethod]
+	public void GlobByWordAllStillNeedsEveryOptionalTokenToMatch()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("red apple", "red* app*", TextFilterType.Glob, TextFilterMatchOptions.ByWordAll));
+		Assert.IsFalse(TextFilter.IsMatch("red apple", "red* pear*", TextFilterType.Glob, TextFilterMatchOptions.ByWordAll));
+	}
 }
