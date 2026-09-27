@@ -838,4 +838,55 @@ public class TextFilterTests
 			new List<string> { "hello" },
 			TextFilter.Filter(["", "hello"], "hel", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll).ToList());
 	}
+
+	[TestMethod]
+	public void GlobStarMatchesAcrossSlash()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("AC/DC", "AC*", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny));
+	}
+
+	[TestMethod]
+	public void GlobQuestionMarkMatchesSlash()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("1/2", "1?2", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny));
+	}
+
+	[TestMethod]
+	public void GlobStarMatchesPath()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("src/Foo.cs", "*.cs", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	public void GlobStarMatchesBackslashPath()
+	{
+		Assert.IsTrue(TextFilter.IsMatch(@"C:\temp\a.txt", "*.txt", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	public void GlobFilterKeepsPathItems()
+	{
+		List<string> result = [.. TextFilter.Filter(["docs/readme.md", "readme.md"], "*readme*")];
+
+		Assert.AreEqual(2, result.Count);
+	}
+
+	[TestMethod]
+	public void GlobStarMatchesAcrossSlashCaseInsensitively()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("docs/README.md", "*readme*", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity.CaseInsensitive));
+	}
+
+	[TestMethod]
+	public void GlobExcludedTokenMatchesAcrossSlash()
+	{
+		Assert.IsFalse(TextFilter.IsMatch("docs/readme.md", "-*readme*", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny));
+	}
+
+	[TestMethod]
+	public void GlobLiteralSlashInPatternStillMatchesSlashInText()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("docs/readme.md", "docs/*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsFalse(TextFilter.IsMatch("docsXreadme.md", "docs/*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
 }
