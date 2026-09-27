@@ -261,15 +261,15 @@ public static partial class TextFilter
 		return textFilterMatchOptions switch
 		{
 			TextFilterMatchOptions.ByWholeString => [text],
-			TextFilterMatchOptions.ByWordAll => [.. text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim())],
-			TextFilterMatchOptions.ByWordAny => [.. text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim())],
+			TextFilterMatchOptions.ByWordAll => [.. text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)],
+			TextFilterMatchOptions.ByWordAny => [.. text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)],
 			_ => throw new NotImplementedException($"{nameof(TextFilterMatchOptions)}.{textFilterMatchOptions} has not been implemented"),
 		};
 	}
 
 	internal static Dictionary<TextFilterTokenType, HashSet<string>> ExtractGlobFilterTokens(string filter)
 	{
-		string[] filterTokens = [.. filter.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim())];
+		string[] filterTokens = [.. filter.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)];
 		return filterTokens.GroupBy(t =>
 		{
 			char prefix = t.First();

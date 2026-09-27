@@ -838,4 +838,35 @@ public class TextFilterTests
 			new List<string> { "hello" },
 			TextFilter.Filter(["", "hello"], "hel", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll).ToList());
 	}
+
+	[TestMethod]
+	[DataRow("foo \t")]
+	[DataRow("foo \r\n")]
+	[DataRow("foo \u00a0")]
+	public void GlobWithNonSpaceWhitespaceDoesNotThrow(string filter)
+	{
+		// Splitting only on ' ' left a chunk of other whitespace that trimmed to an empty token, and
+		// the glob tokenizer then read its first character. A pasted trailing tab or newline is enough.
+		Assert.IsTrue(TextFilter.IsMatch("foo", filter));
+		CollectionAssert.AreEqual(
+			new List<string> { "foo" },
+			TextFilter.Filter(["foo"], filter).ToList());
+	}
+
+	[TestMethod]
+	public void RegexByWordAllIgnoresNonSpaceWhitespaceBetweenWords()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("hello \t world", "o", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll));
+		Assert.IsTrue(TextFilter.IsMatch("hello\tworld", "o", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll));
+		Assert.IsFalse(TextFilter.IsMatch("hello\tbye", "o", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll));
+	}
+
+	[TestMethod]
+	[DataRow(" \t ")]
+	[DataRow("\r\n")]
+	[DataRow("\u00a0")]
+	public void RegexByWordAllDoesNotMatchTextOfOnlyNonSpaceWhitespace(string text)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, "a*", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll));
+	}
 }
