@@ -201,7 +201,7 @@ public static partial class TextFilter
 	/// <param name="keySelector">A function to extract the string key from an item.</param>
 	/// <param name="fuzzyFilter">The fuzzy filter pattern.</param>
 	/// <returns>The collection of items sorted by their match score.</returns>
-	/// <remarks>Uses fuzzy matching to rank the items by their match score.</remarks>
+	/// <remarks>Uses fuzzy matching to rank the items by their match score. Items that match the pattern always sort above items that don't, because a short near-miss can outscore a real match inside a longer string.</remarks>
 	public static IEnumerable<TItem> Rank<TItem>(IEnumerable<TItem> items, Func<TItem, string> keySelector, string fuzzyFilter)
 	{
 		Ensure.NotNull(items);
@@ -213,7 +213,8 @@ public static partial class TextFilter
 			bool isMatch = IsMatch(keySelector(item), fuzzyFilter, out int score, TextFilterType.Fuzzy);
 			return (item, isMatch, score);
 		})
-		.OrderByDescending(t => t.score)
+		.OrderByDescending(t => t.isMatch)
+		.ThenByDescending(t => t.score)
 		.Select(t => t.item);
 	}
 

@@ -328,6 +328,25 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("hello", "hell", "say hello to everyone in the room")]
+	[DataRow("abc", "ab", "axxxxxxbxxxxxxc")]
+	[DataRow("readme", "read", "docs/ReleaseNotes/readme.md")]
+	[DataRow("config", "conf", "src/app/settings/config.json")]
+	public void RankPutsARealMatchAboveAHigherScoringNearMiss(string filter, string nearMiss, string match)
+	{
+		List<string> result = [.. TextFilter.Rank([nearMiss, match], filter)];
+		CollectionAssert.AreEqual(new List<string> { match, nearMiss }, result);
+	}
+
+	[TestMethod]
+	public void RankWithKeySelectorPutsARealMatchAboveAHigherScoringNearMiss()
+	{
+		List<(int Id, string Text)> items = [(1, "hell"), (2, "say hello to everyone in the room")];
+		List<(int Id, string Text)> result = [.. TextFilter.Rank(items, item => item.Text, "hello")];
+		CollectionAssert.AreEqual(new List<(int, string)> { (2, "say hello to everyone in the room"), (1, "hell") }, result);
+	}
+
+	[TestMethod]
 	public void RankEmptyStringsReturnsEmpty()
 	{
 		List<string> strings = [];
