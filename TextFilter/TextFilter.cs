@@ -343,9 +343,9 @@ public static partial class TextFilter
 			return false; // text contains an excluded token
 		}
 
-		Func<IEnumerable<string>, Func<string, bool>, bool> optionalMatchFunc = textFilterMatchOptions is TextFilterMatchOptions.ByWordAny
-			? Enumerable.Any
-			: Enumerable.All;
+		Func<IEnumerable<string>, Func<string, bool>, bool> optionalMatchFunc = textFilterMatchOptions is TextFilterMatchOptions.ByWordAll
+			? Enumerable.All
+			: Enumerable.Any;
 
 		bool anyOptionalMatches = optionalMatchFunc(optionalTokens, filterToken => AnyTokenMatchesGlobFilter(filterToken, textTokens, caseSensitivity));
 
