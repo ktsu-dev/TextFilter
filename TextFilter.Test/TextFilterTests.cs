@@ -609,6 +609,25 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	public void GlobByWholeStringNeedsOnlyOneOptionalTokenToMatch()
+	{
+		// The glob hint promises "one of the optional tokens". ByWholeString used to require all of
+		// them, so a filter of alternatives such as extension globs matched nothing at all.
+		Assert.IsTrue(TextFilter.IsMatch("photo.jpg", "*.jpg *.png", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsFalse(TextFilter.IsMatch("notes.txt", "*.jpg *.png", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		CollectionAssert.AreEqual(
+			new List<string> { "a.jpg", "b.png" },
+			TextFilter.Filter(["a.jpg", "b.png", "c.txt"], "*.jpg *.png", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString).ToList());
+	}
+
+	[TestMethod]
+	public void GlobByWordAllStillNeedsEveryOptionalTokenToMatch()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("red apple", "red* app*", TextFilterType.Glob, TextFilterMatchOptions.ByWordAll));
+		Assert.IsFalse(TextFilter.IsMatch("red apple", "red* pear*", TextFilterType.Glob, TextFilterMatchOptions.ByWordAll));
+	}
+
+	[TestMethod]
 	public void RegexCaseInsensitivityDoesNotDependOnTheCurrentCulture()
 	{
 		// Turkish folds "i" to "İ" and "I" to "ı", so IgnoreCase without CultureInvariant stops
@@ -888,5 +907,36 @@ public class TextFilterTests
 	{
 		Assert.IsTrue(TextFilter.IsMatch("docs/readme.md", "docs/*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
 		Assert.IsFalse(TextFilter.IsMatch("docsXreadme.md", "docs/*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	[DataRow("foo \t")]
+	[DataRow("foo \r\n")]
+	[DataRow("foo \u00a0")]
+	public void GlobWithNonSpaceWhitespaceDoesNotThrow(string filter)
+	{
+		// Splitting only on ' ' left a chunk of other whitespace that trimmed to an empty token, and
+		// the glob tokenizer then read its first character. A pasted trailing tab or newline is enough.
+		Assert.IsTrue(TextFilter.IsMatch("foo", filter));
+		CollectionAssert.AreEqual(
+			new List<string> { "foo" },
+			TextFilter.Filter(["foo"], filter).ToList());
+	}
+
+	[TestMethod]
+	public void RegexByWordAllIgnoresNonSpaceWhitespaceBetweenWords()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("hello \t world", "o", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll));
+		Assert.IsTrue(TextFilter.IsMatch("hello\tworld", "o", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll));
+		Assert.IsFalse(TextFilter.IsMatch("hello\tbye", "o", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll));
+	}
+
+	[TestMethod]
+	[DataRow(" \t ")]
+	[DataRow("\r\n")]
+	[DataRow("\u00a0")]
+	public void RegexByWordAllDoesNotMatchTextOfOnlyNonSpaceWhitespace(string text)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, "a*", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll));
 	}
 }
