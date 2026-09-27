@@ -453,6 +453,39 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("hello world", "hello world")]
+	[DataRow("hello world", @"o\sw")]
+	[DataRow("hello world", "o w")]
+	[DataRow("New York City", "New York")]
+	[DataRow("12 items left", @"\d+\s+items")]
+	public void IsMatchRegexSpanningWhitespaceMatchesUnderTheDefaults(string text, string pattern) =>
+		Assert.IsTrue(TextFilter.IsMatch(text, pattern, TextFilterType.Regex));
+
+	[TestMethod]
+	public void IsMatchRegexByWordAnyStillMatchesAWordAnchoredPattern()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("hello world", "^world", TextFilterType.Regex, TextFilterMatchOptions.ByWordAny));
+		Assert.IsTrue(TextFilter.IsMatch("hello world", "hello$", TextFilterType.Regex, TextFilterMatchOptions.ByWordAny));
+		Assert.IsFalse(TextFilter.IsMatch("hello world", "hello  world", TextFilterType.Regex, TextFilterMatchOptions.ByWordAny));
+	}
+
+	[TestMethod]
+	public void FilterRegexSpanningWhitespaceKeepsMatchingItemsUnderTheDefaults()
+	{
+		List<string> strings = ["New York City", "York", "Newark"];
+		List<string> result = [.. TextFilter.Filter(strings, "New York", TextFilterType.Regex)];
+		CollectionAssert.AreEqual(new List<string> { "New York City" }, result);
+	}
+
+	[TestMethod]
+	public void DoesMatchRegexByWordAllStillRequiresEveryWordToMatchOnItsOwn()
+	{
+		// Documented: a whitespace-spanning pattern needs ByWholeString when every word must match.
+		Assert.IsFalse(TextFilter.DoesMatchRegex("hello world", "hello world", TextFilterMatchOptions.ByWordAll));
+		Assert.IsTrue(TextFilter.DoesMatchRegex("hello world", "hello world", TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
 	public void DoesMatchRegexByWordAllReturnsFalse()
 	{
 		bool result = TextFilter.DoesMatchRegex("hello world", "^test", TextFilterMatchOptions.ByWordAll);
