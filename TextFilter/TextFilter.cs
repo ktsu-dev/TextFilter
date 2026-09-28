@@ -454,6 +454,13 @@ public static partial class TextFilter
 	/// An invalid pattern matches everything. A pattern that cannot be evaluated within one second —
 	/// catastrophic backtracking, for instance — reports no match for the token that timed out
 	/// rather than throwing, so a caller-supplied pattern cannot hang the calling thread.
+	/// <para>
+	/// Under <see cref="TextFilterMatchOptions.ByWordAny"/> the pattern is tried against the whole text
+	/// before each word, so a pattern that spans whitespace, such as <c>New York</c> or <c>\d+\s+items</c>,
+	/// still matches. Under <see cref="TextFilterMatchOptions.ByWordAll"/> every word must match on its
+	/// own, so a pattern that spans whitespace never matches there; use
+	/// <see cref="TextFilterMatchOptions.ByWholeString"/> for those.
+	/// </para>
 	/// </remarks>
 	public static bool DoesMatchRegex(string text, string filter, TextFilterMatchOptions textFilterMatchOptions, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
 	{
@@ -499,24 +506,34 @@ public static partial class TextFilter
 			return false;
 		}
 
+		// No single word contains whitespace, so a pattern like "hello world" or "o\sw" can only ever
+		// match the whole text. Under ByWordAny, try that first; the per-word pass below still runs,
+		// so a word-anchored pattern like "^world" keeps matching "hello world".
+		if (textFilterMatchOptions is TextFilterMatchOptions.ByWordAny && IsMatchWithinTimeout(regex, text))
+		{
+			return true;
+		}
+
 		Func<IEnumerable<string>, Func<string, bool>, bool> matchFunc = textFilterMatchOptions is TextFilterMatchOptions.ByWordAny
 			? Enumerable.Any
 			: Enumerable.All;
 
-		return matchFunc(textTokens, textToken =>
+		return matchFunc(textTokens, textToken => IsMatchWithinTimeout(regex, textToken));
+	}
+
+	private static bool IsMatchWithinTimeout(Regex regex, string input)
+	{
+		try
 		{
-			try
-			{
-				return regex.IsMatch(textToken);
-			}
-			catch (RegexMatchTimeoutException)
-			{
-				// A pattern that cannot be evaluated within the timeout is treated as not matching
-				// this token rather than thrown at the caller. Filtering is a predicate, and a list
-				// that throws mid-keystroke on a pathological pattern is a worse contract than one
-				// that returns nothing for it. This mirrors how an invalid pattern degrades above.
-				return false;
-			}
-		});
+			return regex.IsMatch(input);
+		}
+		catch (RegexMatchTimeoutException)
+		{
+			// A pattern that cannot be evaluated within the timeout is treated as not matching
+			// this input rather than thrown at the caller. Filtering is a predicate, and a list
+			// that throws mid-keystroke on a pathological pattern is a worse contract than one
+			// that returns nothing for it. This mirrors how an invalid pattern degrades in DoesMatchRegex.
+			return false;
+		}
 	}
 }
