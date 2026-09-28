@@ -1,10 +1,7 @@
-## v1.7.9 (patch)
+## v1.7.10-pre.1 (prerelease)
 
-Changes since v1.7.8:
+Changes since v1.7.9:
 
-- Let a regex that spans whitespace match under ByWordAny [patch] ([@Claude](https://github.com/Claude))
-- Rank real fuzzy matches above near-misses [patch] ([@Claude](https://github.com/Claude))
-- Fold an inline (?i) culture-invariantly too [patch] ([@Claude](https://github.com/Claude))
-- Merge main into fix/glob-wildcards-cross-separators ([@matt-edmondson](https://github.com/matt-edmondson))
-- Let glob * and ? match across / and \ [patch] ([@Claude](https://github.com/Claude))
+- Bump Polyfill from 11.4.0 to 11.4.1 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
