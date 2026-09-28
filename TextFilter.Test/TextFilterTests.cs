@@ -1020,4 +1020,31 @@ public class TextFilterTests
 	{
 		Assert.IsFalse(TextFilter.IsMatch(text, "a*", TextFilterType.Regex, TextFilterMatchOptions.ByWordAll));
 	}
+
+	private static readonly string[] PaddingCandidates = ["hello world", "helium", "help", "yellow", "abcdef"];
+	private static readonly string[] HelMatches = ["hello world", "helium", "help"];
+
+	[TestMethod]
+	[DataRow("hel ")]
+	[DataRow(" hel")]
+	[DataRow("  hel\t")]
+	public void FuzzyIsMatchIgnoresFilterPadding(string paddedFilter)
+	{
+		foreach (string text in PaddingCandidates)
+		{
+			Assert.AreEqual(TextFilter.IsMatch(text, "hel", TextFilterType.Fuzzy), TextFilter.IsMatch(text, paddedFilter, TextFilterType.Fuzzy),
+				$"Padding in '{paddedFilter}' should not change whether '{text}' fuzzy-matches.");
+		}
+	}
+
+	[TestMethod]
+	[DataRow("hel ")]
+	[DataRow(" hel")]
+	public void FuzzyFilterIgnoresFilterPadding(string paddedFilter)
+	{
+		List<string> strings = ["hello world", "helium", "help", "yellow"];
+		List<string> result = [.. TextFilter.Filter(strings, paddedFilter, TextFilterType.Fuzzy)];
+		CollectionAssert.AreEquivalent(HelMatches, result,
+			$"Padding in '{paddedFilter}' should not hide items that 'hel' matches.");
+	}
 }
