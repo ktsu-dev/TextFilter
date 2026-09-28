@@ -336,7 +336,7 @@ public static partial class TextFilter
 
 		// An unparseable excluded token is skipped rather than treated as match-anything, which here
 		// would exclude every item while the user is still typing the token.
-		bool anyExcludedMatches = excludedTokens.Any(filterToken => ResolveGlob(filterToken, caseSensitivity) is Glob glob && textTokens.Any(glob.IsMatch));
+		bool anyExcludedMatches = excludedTokens.Any(filterToken => ResolveGlob(filterToken, caseSensitivity) is Glob glob && textTokens.Any(token => IsGlobMatch(glob, token)));
 
 		if (anyExcludedMatches)
 		{
@@ -382,7 +382,7 @@ public static partial class TextFilter
 
 		Glob? glob = ResolveGlob(filterToken, caseSensitivity);
 
-		return glob is null || textTokens.Any(glob.IsMatch);
+		return glob is null || textTokens.Any(token => IsGlobMatch(glob, token));
 	}
 
 	/// <summary>
@@ -399,8 +399,18 @@ public static partial class TextFilter
 
 		Glob? glob = ResolveGlob(filterToken, caseSensitivity);
 
-		return glob is null || textTokens.All(glob.IsMatch);
+		return glob is null || textTokens.All(token => IsGlobMatch(glob, token));
 	}
+
+	// DotNet.Glob is a file-path glob, so its * and ? stop at / and \. TextFilter filters arbitrary
+	// text, where a slash is an ordinary character, so both separators are swapped for a private-use
+	// character in the pattern and in the text before DotNet.Glob sees either.
+	private const char MaskedPathSeparator = '\uE000';
+
+	private static string MaskPathSeparators(string value) =>
+		value.Replace('/', MaskedPathSeparator).Replace('\\', MaskedPathSeparator);
+
+	private static bool IsGlobMatch(Glob glob, string textToken) => glob.IsMatch(MaskPathSeparators(textToken));
 
 	// Returns null for a token that cannot be parsed, so each caller can decide what ignoring it means.
 	private static Glob? ResolveGlob(string filterToken, TextFilterCaseSensitivity caseSensitivity)
@@ -411,9 +421,10 @@ public static partial class TextFilter
 		{
 			try
 			{
+				string maskedToken = MaskPathSeparators(filterToken);
 				glob = caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
-					? Glob.Parse(filterToken, CaseInsensitiveGlobOptions)
-					: Glob.Parse(filterToken);
+					? Glob.Parse(maskedToken, CaseInsensitiveGlobOptions)
+					: Glob.Parse(maskedToken);
 			}
 			catch (Exception ex) when (ex is not OutOfMemoryException)
 			{
