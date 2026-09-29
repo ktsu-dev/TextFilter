@@ -240,7 +240,8 @@ public static partial class TextFilter
 			{
 				TextFilterType.Glob => DoesMatchGlob(text, filter, textFilterMatchOptions, caseSensitivity),
 				TextFilterType.Regex => DoesMatchRegex(text, filter, textFilterMatchOptions, caseSensitivity),
-				TextFilterType.Fuzzy => Fuzzy.Contains(text.AsSpan(), filter.AsSpan(), out score),
+				// Padding would otherwise become a space the text must contain, so " hel" matched nothing.
+				TextFilterType.Fuzzy => Fuzzy.Contains(text.AsSpan(), filter.AsSpan().Trim(), out score),
 				_ => throw new NotImplementedException($"{nameof(TextFilterType)}.{filterType} has not been implemented"),
 			};
 	}
