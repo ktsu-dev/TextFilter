@@ -1,7 +1,6 @@
-## v1.7.10-pre.1 (prerelease)
+## v1.7.10 (patch)
 
 Changes since v1.7.9:
 
-- Bump Polyfill from 11.4.0 to 11.4.1 ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- [patch] Ignore leading and trailing spaces in a fuzzy filter ([@Claude](https://github.com/Claude))
 
