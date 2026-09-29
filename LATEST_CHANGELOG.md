@@ -1,6 +1,6 @@
-## v1.7.10 (patch)
+## v1.7.11 (patch)
 
-Changes since v1.7.9:
+Changes since v1.7.10:
 
-- [patch] Ignore leading and trailing spaces in a fuzzy filter ([@Claude](https://github.com/Claude))
+- Move CI onto the shared ci-shared.yml pipeline ([@Claude](https://github.com/Claude))
 
