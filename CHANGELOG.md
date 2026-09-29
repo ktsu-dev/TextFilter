@@ -1,3 +1,9 @@
+## v1.7.12-pre.1 (prerelease)
+
+Changes since v1.7.11:
+
+- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
 ## v1.7.11 (patch)
 
 Changes since v1.7.10:
