@@ -126,6 +126,13 @@ public static partial class TextFilter
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "Not available in older frameworks")]
 	private static Regex RegexMatchAnything() => new(".*", RegexOptions.Compiled);
 
+	// Stands in for a pattern that has already run out of time once. The timeout bounds a single
+	// IsMatch call, so without this the same pathological pattern would pay it again for every word
+	// of every item and on every later call. "(?!)" fails at once on any input, which is the answer a
+	// timeout already degrades to.
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "Not available in older frameworks")]
+	private static readonly Regex RegexMatchNothing = new("(?!)", RegexOptions.None);
+
 	/// <summary>
 	/// Gets a hint for the specified filter type.
 	/// </summary>
@@ -453,8 +460,10 @@ public static partial class TextFilter
 	/// <returns><c>true</c> if the text matches the regex filter pattern; otherwise, <c>false</c>.</returns>
 	/// <remarks>
 	/// An invalid pattern matches everything. A pattern that cannot be evaluated within one second —
-	/// catastrophic backtracking, for instance — reports no match for the token that timed out
-	/// rather than throwing, so a caller-supplied pattern cannot hang the calling thread.
+	/// catastrophic backtracking, for instance — reports no match rather than throwing, so a
+	/// caller-supplied pattern cannot hang the calling thread. Once a pattern has timed out it is
+	/// remembered as matching nothing, for the remaining words and for later calls at the same case
+	/// sensitivity, so a filter over many items pays the timeout once rather than once per word.
 	/// <para>
 	/// Under <see cref="TextFilterMatchOptions.ByWordAny"/> the pattern is tried against the whole text
 	/// before each word, so a pattern that spans whitespace, such as <c>New York</c> or <c>\d+\s+items</c>,
@@ -499,6 +508,9 @@ public static partial class TextFilter
 			AddBounded(RegexCache, cacheKey, regex);
 		}
 
+		// Swapped for RegexMatchNothing if the pattern times out partway through
+		Regex activeRegex = regex;
+
 		// Text with no words -- "" or "   " split by word -- has nothing for the pattern to match.
 		// Without this, Enumerable.All over the empty set is vacuously true, so under ByWordAll blank
 		// text matched every pattern while the glob path reported no match for the same input.
@@ -510,7 +522,7 @@ public static partial class TextFilter
 		// No single word contains whitespace, so a pattern like "hello world" or "o\sw" can only ever
 		// match the whole text. Under ByWordAny, try that first; the per-word pass below still runs,
 		// so a word-anchored pattern like "^world" keeps matching "hello world".
-		if (textFilterMatchOptions is TextFilterMatchOptions.ByWordAny && IsMatchWithinTimeout(regex, text))
+		if (textFilterMatchOptions is TextFilterMatchOptions.ByWordAny && IsMatchWithinTimeout(ref activeRegex, cacheKey, text))
 		{
 			return true;
 		}
@@ -519,10 +531,10 @@ public static partial class TextFilter
 			? Enumerable.Any
 			: Enumerable.All;
 
-		return matchFunc(textTokens, textToken => IsMatchWithinTimeout(regex, textToken));
+		return matchFunc(textTokens, textToken => IsMatchWithinTimeout(ref activeRegex, cacheKey, textToken));
 	}
 
-	private static bool IsMatchWithinTimeout(Regex regex, string input)
+	private static bool IsMatchWithinTimeout(ref Regex regex, string cacheKey, string input)
 	{
 		try
 		{
@@ -534,6 +546,11 @@ public static partial class TextFilter
 			// this input rather than thrown at the caller. Filtering is a predicate, and a list
 			// that throws mid-keystroke on a pathological pattern is a worse contract than one
 			// that returns nothing for it. This mirrors how an invalid pattern degrades in DoesMatchRegex.
+			//
+			// The pattern is then swapped for one that matches nothing, both for the rest of this
+			// call and in the cache, so the timeout is paid once rather than per word and per item.
+			regex = RegexMatchNothing;
+			RegexCache[cacheKey] = RegexMatchNothing;
 			return false;
 		}
 	}
