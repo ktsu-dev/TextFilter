@@ -1,6 +1,7 @@
-## v1.7.12-pre.3 (prerelease)
+## v1.7.12 (patch)
 
-Changes since v1.7.12-pre.2:
+Changes since v1.7.11:
 
-- Bump Polyfill from 11.4.1 to 11.4.3 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Give the never-match sentinel regex a timeout ([@Claude](https://github.com/Claude))
+- Remember a regex that timed out so Filter pays the timeout once [patch] ([@Claude](https://github.com/Claude))
 
