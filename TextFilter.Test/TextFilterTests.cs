@@ -816,6 +816,50 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	public void FilteringManyItemsWithATimedOutPatternPaysTheTimeoutOnce()
+	{
+		// The timeout bounds one IsMatch call. Unless the timed-out pattern is remembered, every item
+		// runs it again and the whole Filter takes one timeout per item: ten seconds here. Each test
+		// uses its own pathological pattern, because the regex cache is shared across tests.
+		string pattern = "(c+)+$";
+		List<string> items = [.. Enumerable.Range(0, 10).Select(i => new string('c', 40) + "X" + i)];
+
+		System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+		List<string> results = [.. TextFilter.Filter(items, pattern, TextFilterType.Regex, TextFilterMatchOptions.ByWholeString)];
+		stopwatch.Stop();
+
+		Assert.IsEmpty(results, "A pattern that cannot be evaluated in time should match nothing.");
+		Assert.IsLessThan(4_000, stopwatch.ElapsedMilliseconds, "Filter should pay the regex timeout about once, not once per item.");
+	}
+
+	[TestMethod]
+	public void MatchingManyWordsWithATimedOutPatternPaysTheTimeoutOnce()
+	{
+		// Under ByWordAny the pattern is tried against the whole text and then each word in turn,
+		// so eight pathological words would otherwise cost nine timeouts in one call.
+		string pattern = "(d+)+$";
+		string text = string.Join(" ", Enumerable.Range(0, 8).Select(i => new string('d', 40) + "X" + i));
+
+		System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+		bool result = TextFilter.IsMatch(text, pattern, TextFilterType.Regex, TextFilterMatchOptions.ByWordAny);
+		stopwatch.Stop();
+
+		Assert.IsFalse(result, "A pattern that cannot be evaluated in time should report no match.");
+		Assert.IsLessThan(4_000, stopwatch.ElapsedMilliseconds, "IsMatch should pay the regex timeout about once, not once per word.");
+	}
+
+	[TestMethod]
+	public void APatternThatTimedOutAtOneCaseSensitivityStillWorksAtTheOther()
+	{
+		string pattern = "(f+)+$";
+
+		Assert.IsFalse(TextFilter.IsMatch(new string('f', 40) + "X", pattern, TextFilterType.Regex, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+		Assert.IsTrue(
+			TextFilter.IsMatch("FFF", pattern, TextFilterType.Regex, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive),
+			"Remembering the timeout is per case sensitivity, so the case-insensitive pattern should still match.");
+	}
+
+	[TestMethod]
 	public void AnOrdinaryRegexIsUnaffectedByTheTimeout()
 	{
 		// Guards the direction the timeout could have broken: a normal pattern still matches.
