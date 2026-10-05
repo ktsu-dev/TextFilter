@@ -131,7 +131,7 @@ public static partial class TextFilter
 	// of every item and on every later call. "(?!)" fails at once on any input, which is the answer a
 	// timeout already degrades to.
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "Not available in older frameworks")]
-	private static readonly Regex RegexMatchNothing = new("(?!)", RegexOptions.None);
+	private static readonly Regex RegexMatchNothing = new("(?!)", RegexOptions.None, RegexMatchTimeout);
 
 	/// <summary>
 	/// Gets a hint for the specified filter type.
