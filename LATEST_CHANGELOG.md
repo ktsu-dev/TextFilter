@@ -1,7 +1,6 @@
-## v1.7.12 (patch)
+## v1.7.13-pre.1 (prerelease)
 
-Changes since v1.7.11:
+Changes since v1.7.12:
 
-- Give the never-match sentinel regex a timeout ([@Claude](https://github.com/Claude))
-- Remember a regex that timed out so Filter pays the timeout once [patch] ([@Claude](https://github.com/Claude))
+- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
