@@ -1028,6 +1028,45 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("src/a.cs", "src/**/*.cs")]
+	[DataRow("src/x/a.cs", "src/**/*.cs")]
+	[DataRow("src/x/y/a.cs", "src/**/*.cs")]
+	[DataRow("a.cs", "**/*.cs")]
+	[DataRow("src/a.cs", "**/*.cs")]
+	[DataRow("docs/readme.md", "**/readme.md")]
+	[DataRow(@"src\x\a.cs", @"src\**\*.cs")]
+	[DataRow("a/b/c/d/e/f.cs", "**/**/**/**/**/f.cs")]
+	public void GlobStarSlashMatchesZeroOrMoreSegments(string text, string filter)
+	{
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	[DataRow("docs/a.cs", "src/**/*.cs")]
+	[DataRow("src/a.md", "src/**/*.cs")]
+	[DataRow("docs/readme.md.bak", "**/readme.md")]
+	public void GlobStarSlashStillRejectsNonMatchingPaths(string text, string filter)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	public void GlobStarSlashFiltersPathItems()
+	{
+		List<string> result = [.. TextFilter.Filter(["src/a.cs", "src/x/a.cs", "docs/readme.md"], "src/**/*.cs", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString)];
+
+		Assert.AreEqual(2, result.Count);
+		Assert.AreEqual("src/a.cs", result[0]);
+		Assert.AreEqual("src/x/a.cs", result[1]);
+	}
+
+	[TestMethod]
+	public void GlobStarSlashMatchesCaseInsensitively()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("Docs/README.md", "**/readme.md", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+	}
+
+	[TestMethod]
 	public void GlobLiteralSlashInPatternStillMatchesSlashInText()
 	{
 		Assert.IsTrue(TextFilter.IsMatch("docs/readme.md", "docs/*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));

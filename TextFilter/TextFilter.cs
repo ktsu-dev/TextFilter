@@ -83,7 +83,7 @@ public static partial class TextFilter
 	private static HashSet<char> RequiredTokenPrefixes { get; } = ['+'];
 	private static ConcurrentDictionary<string, Regex> RegexCache { get; } = [];
 	// A null entry records a token that could not be parsed, so the parse is not retried on every keystroke.
-	private static ConcurrentDictionary<string, Glob?> GlobCache { get; } = [];
+	private static ConcurrentDictionary<string, Glob[]?> GlobCache { get; } = [];
 
 	// Filter patterns are caller-supplied, and in the keystroke-driven filter box this library exists
 	// for, every prefix of what the user types becomes its own key. Unbounded, the caches therefore
@@ -345,7 +345,7 @@ public static partial class TextFilter
 
 		// An unparseable excluded token is skipped rather than treated as match-anything, which here
 		// would exclude every item while the user is still typing the token.
-		bool anyExcludedMatches = excludedTokens.Any(filterToken => ResolveGlob(filterToken, caseSensitivity) is Glob glob && textTokens.Any(token => IsGlobMatch(glob, token)));
+		bool anyExcludedMatches = excludedTokens.Any(filterToken => ResolveGlob(filterToken, caseSensitivity) is Glob[] globs && textTokens.Any(token => IsGlobMatch(globs, token)));
 
 		if (anyExcludedMatches)
 		{
@@ -389,9 +389,9 @@ public static partial class TextFilter
 		Ensure.NotNull(filterToken);
 		Ensure.NotNull(textTokens);
 
-		Glob? glob = ResolveGlob(filterToken, caseSensitivity);
+		Glob[]? globs = ResolveGlob(filterToken, caseSensitivity);
 
-		return glob is null || textTokens.Any(token => IsGlobMatch(glob, token));
+		return globs is null || textTokens.Any(token => IsGlobMatch(globs, token));
 	}
 
 	/// <summary>
@@ -406,9 +406,9 @@ public static partial class TextFilter
 		Ensure.NotNull(filterToken);
 		Ensure.NotNull(textTokens);
 
-		Glob? glob = ResolveGlob(filterToken, caseSensitivity);
+		Glob[]? globs = ResolveGlob(filterToken, caseSensitivity);
 
-		return glob is null || textTokens.All(token => IsGlobMatch(glob, token));
+		return globs is null || textTokens.All(token => IsGlobMatch(globs, token));
 	}
 
 	// DotNet.Glob is a file-path glob, so its * and ? stop at / and \. TextFilter filters arbitrary
@@ -419,21 +419,66 @@ public static partial class TextFilter
 	private static string MaskPathSeparators(string value) =>
 		value.Replace('/', MaskedPathSeparator).Replace('\\', MaskedPathSeparator);
 
-	private static bool IsGlobMatch(Glob glob, string textToken) => glob.IsMatch(MaskPathSeparators(textToken));
+	private static bool IsGlobMatch(Glob[] globs, string textToken)
+	{
+		string maskedText = MaskPathSeparators(textToken);
+		return globs.Any(glob => glob.IsMatch(maskedText));
+	}
+
+	// Masking also hides the separators DotNet.Glob needs to recognise "**/" as "zero or more path
+	// segments", leaving "**" followed by a literal character. Since * already crosses the masked
+	// separator, each "**/" is expanded here instead: dropped, for the zero-segment case, or kept as
+	// "*/", for "anything ending at a separator". A token matches if any expansion does.
+	private const string MaskedGlobStarSegment = "**\uE000";
+
+	// Each "**/" doubles the expansions, so only this many are expanded both ways; any beyond it keep
+	// only the "*/" form and so need at least one segment.
+	private const int MaxExpandedGlobStarSegments = 4;
+
+	internal static IReadOnlyList<string> ExpandGlobStarSegments(string maskedToken)
+	{
+		List<string> expansions = [string.Empty];
+		int start = 0;
+		int expanded = 0;
+		int index;
+
+		while ((index = maskedToken.IndexOf(MaskedGlobStarSegment, start, StringComparison.Ordinal)) >= 0)
+		{
+			string literal = maskedToken[start..index];
+			bool expandBothWays = expanded < MaxExpandedGlobStarSegments;
+			List<string> next = new(expansions.Count * 2);
+
+			foreach (string prefix in expansions)
+			{
+				next.Add(prefix + literal + "*" + MaskedPathSeparator);
+				if (expandBothWays)
+				{
+					next.Add(prefix + literal);
+				}
+			}
+
+			expansions = next;
+			expanded++;
+			start = index + MaskedGlobStarSegment.Length;
+		}
+
+		string tail = maskedToken[start..];
+		return [.. expansions.Select(prefix => prefix + tail).Distinct(StringComparer.Ordinal)];
+	}
 
 	// Returns null for a token that cannot be parsed, so each caller can decide what ignoring it means.
-	private static Glob? ResolveGlob(string filterToken, TextFilterCaseSensitivity caseSensitivity)
+	private static Glob[]? ResolveGlob(string filterToken, TextFilterCaseSensitivity caseSensitivity)
 	{
 		string cacheKey = CacheKey(filterToken, caseSensitivity);
 
-		if (!GlobCache.TryGetValue(cacheKey, out Glob? glob))
+		if (!GlobCache.TryGetValue(cacheKey, out Glob[]? globs))
 		{
 			try
 			{
 				string maskedToken = MaskPathSeparators(filterToken);
-				glob = caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
-					? Glob.Parse(maskedToken, CaseInsensitiveGlobOptions)
-					: Glob.Parse(maskedToken);
+				globs = [.. ExpandGlobStarSegments(maskedToken).Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
+					? Glob.Parse(pattern, CaseInsensitiveGlobOptions)
+					: Glob.Parse(pattern))];
 			}
 			catch (Exception ex) when (ex is not OutOfMemoryException)
 			{
@@ -441,13 +486,13 @@ public static partial class TextFilter
 				// dash ("file[0-"), which is ordinary intermediate input while someone types a range into
 				// a filter box. Cache it as unparseable so the exception is not raised again on every
 				// keystroke. Caught broadly so the next tokeniser bug is contained too.
-				glob = null;
+				globs = null;
 			}
 
-			AddBounded(GlobCache, cacheKey, glob);
+			AddBounded(GlobCache, cacheKey, globs);
 		}
 
-		return glob;
+		return globs;
 	}
 
 	/// <summary>
