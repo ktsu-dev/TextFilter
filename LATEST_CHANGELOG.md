@@ -1,6 +1,6 @@
-## v1.7.13-pre.1 (prerelease)
+## v1.7.13 (patch)
 
 Changes since v1.7.12:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Make glob **/ match zero or more path segments again [patch] ([@Claude](https://github.com/Claude))
 
