@@ -2,260 +2,260 @@
 
 Changes since v1.7.13:
 
-- Match a trailing dash in a glob class literally [patch] ([@Claude](https://github.com/Claude))
+- Match a trailing dash in a glob class literally [patch] (Claude)
 
 ## v1.7.14-pre.3 (prerelease)
 
 Changes since v1.7.14-pre.2:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.7.14-pre.2 (prerelease)
 
 Changes since v1.7.14-pre.1:
 
-- Bump MSTest.Sdk from 4.4.1 to 4.5.1 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump MSTest.Sdk from 4.4.1 to 4.5.1 (dependabot[bot])
 
 ## v1.7.14-pre.1 (prerelease)
 
 Changes since v1.7.13:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.7.13 (patch)
 
 Changes since v1.7.12:
 
-- Make glob **/ match zero or more path segments again [patch] ([@Claude](https://github.com/Claude))
+- Make glob **/ match zero or more path segments again [patch] (Claude)
 
 ## v1.7.13-pre.1 (prerelease)
 
 Changes since v1.7.12:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.7.12 (patch)
 
 Changes since v1.7.11:
 
-- Give the never-match sentinel regex a timeout ([@Claude](https://github.com/Claude))
-- Remember a regex that timed out so Filter pays the timeout once [patch] ([@Claude](https://github.com/Claude))
+- Give the never-match sentinel regex a timeout (Claude)
+- Remember a regex that timed out so Filter pays the timeout once [patch] (Claude)
 
 ## v1.7.12-pre.3 (prerelease)
 
 Changes since v1.7.12-pre.2:
 
-- Bump Polyfill from 11.4.1 to 11.4.3 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump Polyfill from 11.4.1 to 11.4.3 (dependabot[bot])
 
 ## v1.7.12-pre.2 (prerelease)
 
 Changes since v1.7.12-pre.1:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.7.12-pre.1 (prerelease)
 
 Changes since v1.7.11:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.7.11 (patch)
 
 Changes since v1.7.10:
 
-- Move CI onto the shared ci-shared.yml pipeline ([@Claude](https://github.com/Claude))
+- Move CI onto the shared ci-shared.yml pipeline (Claude)
 
 ## v1.7.10 (patch)
 
 Changes since v1.7.9:
 
-- [patch] Ignore leading and trailing spaces in a fuzzy filter ([@Claude](https://github.com/Claude))
+- [patch] Ignore leading and trailing spaces in a fuzzy filter (Claude)
 
 ## v1.7.10-pre.1 (prerelease)
 
 Changes since v1.7.9:
 
-- Bump Polyfill from 11.4.0 to 11.4.1 ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump Polyfill from 11.4.0 to 11.4.1 (dependabot[bot])
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.7.9 (patch)
 
 Changes since v1.7.8:
 
-- Let a regex that spans whitespace match under ByWordAny [patch] ([@Claude](https://github.com/Claude))
-- Rank real fuzzy matches above near-misses [patch] ([@Claude](https://github.com/Claude))
-- Fold an inline (?i) culture-invariantly too [patch] ([@Claude](https://github.com/Claude))
-- Merge main into fix/glob-wildcards-cross-separators ([@matt-edmondson](https://github.com/matt-edmondson))
-- Let glob * and ? match across / and \ [patch] ([@Claude](https://github.com/Claude))
+- Let a regex that spans whitespace match under ByWordAny [patch] (Claude)
+- Rank real fuzzy matches above near-misses [patch] (Claude)
+- Fold an inline (?i) culture-invariantly too [patch] (Claude)
+- Merge main into fix/glob-wildcards-cross-separators (matt-edmondson)
+- Let glob * and ? match across / and \ [patch] (Claude)
 
 ## v1.7.8 (patch)
 
 Changes since v1.7.7:
 
-- Drop the SDK's .gitignore rewrite from this change ([@Claude](https://github.com/Claude))
-- Move the #113 tests beside the other glob case tests and drop the SDK's .gitignore rewrite ([@Claude](https://github.com/Claude))
-- Match any optional glob token under ByWholeString [patch] ([@Claude](https://github.com/Claude))
-- Split filters and text on all whitespace, not only ' ' [patch] ([@Claude](https://github.com/Claude))
+- Drop the SDK's .gitignore rewrite from this change (Claude)
+- Move the #113 tests beside the other glob case tests and drop the SDK's .gitignore rewrite (Claude)
+- Match any optional glob token under ByWholeString [patch] (Claude)
+- Split filters and text on all whitespace, not only ' ' [patch] (Claude)
 
 ## v1.7.7 (patch)
 
 Changes since v1.7.6:
 
-- Merge main into claude/textfilter-110-excluded-halftyped-glob ([@matt-edmondson](https://github.com/matt-edmondson))
-- fix: stop a half-typed excluded glob token hiding every item [patch] ([@Claude](https://github.com/Claude))
+- Merge main into claude/textfilter-110-excluded-halftyped-glob (matt-edmondson)
+- fix: stop a half-typed excluded glob token hiding every item [patch] (Claude)
 
 ## v1.7.6 (patch)
 
 Changes since v1.7.5:
 
-- Merge remote-tracking branch 'origin/main' into fix/regex-bywordall-empty-text-107 ([@Claude](https://github.com/Claude))
-- Stop regex ByWordAll matching blank text [patch] ([@Claude](https://github.com/Claude))
+- Merge remote-tracking branch 'origin/main' into fix/regex-bywordall-empty-text-107 (Claude)
+- Stop regex ByWordAll matching blank text [patch] (Claude)
 
 ## v1.7.5 (patch)
 
 Changes since v1.7.4:
 
-- Stop half-typed glob ranges from throwing [patch] ([@Claude](https://github.com/Claude))
+- Stop half-typed glob ranges from throwing [patch] (Claude)
 
 ## v1.7.4 (patch)
 
 Changes since v1.7.3:
 
-- Bound the regex and glob caches [patch] ([@Claude](https://github.com/Claude))
-- Fold case invariantly in regex matching [patch] ([@Claude](https://github.com/Claude))
+- Bound the regex and glob caches [patch] (Claude)
+- Fold case invariantly in regex matching [patch] (Claude)
 
 ## v1.7.3 (patch)
 
 Changes since v1.7.2:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.7.2 (patch)
 
 Changes since v1.7.1:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.7.1 (patch)
 
 Changes since v1.7.0:
 
-- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 11 updates (dependabot[bot])
 
 ## v1.7.0 (minor)
 
 Changes since v1.6.0:
 
-- Merge main into the case-insensitive matching branch ([@Claude](https://github.com/Claude))
-- Bound regex evaluation with a match timeout [patch] ([@Claude](https://github.com/Claude))
-- Let a caller ask for case-insensitive matching [minor] ([@Claude](https://github.com/Claude))
+- Merge main into the case-insensitive matching branch (Claude)
+- Bound regex evaluation with a match timeout [patch] (Claude)
+- Let a caller ask for case-insensitive matching [minor] (Claude)
 
 ## v1.6.0 (minor)
 
 Changes since v1.5.0:
 
-- Match required glob tokens by any word under ByWordAll ([@Claude](https://github.com/Claude))
-- Gate Dependabot auto-merge on CI actually being green ([@Claude](https://github.com/Claude))
-- ci: adopt the consolidated .NET workflow [patch] ([@Claude](https://github.com/Claude))
-- ci: make the SonarQube quality gate opt in [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
-- ci: adopt the unified dotnet workflow [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
-- chore: store icon.png in LFS as .gitattributes declares ([@matt-edmondson](https://github.com/matt-edmondson))
-- docs: scope build badge to the default branch ([@matt-edmondson](https://github.com/matt-edmondson))
-- docs: correct README, DESCRIPTION and TAGS metadata ([@matt-edmondson](https://github.com/matt-edmondson))
-- Fix build against ktsu.Sdk 2.27.0 ([@matt-edmondson](https://github.com/matt-edmondson))
-- Stop Update SDKs failing when there is nothing to update ([@matt-edmondson](https://github.com/matt-edmondson))
-- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
-- Sync .editorconfig ([@KtsuTools](https://github.com/KtsuTools))
-- Sync global.json ([@KtsuTools](https://github.com/KtsuTools))
-- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
-- chore: update ktsu.Sdk to 2.21.1 [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
-- fix: remove unnecessary SourceLink package references ([@matt-edmondson](https://github.com/matt-edmondson))
-- fix: add explicit System.Memory package reference ([@matt-edmondson](https://github.com/matt-edmondson))
-- Add TAGS.md with NuGet package tags ([@matt-edmondson](https://github.com/matt-edmondson))
-- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
-- Remove legacy build scripts ([@matt-edmondson](https://github.com/matt-edmondson))
-- Remove .github\workflows\project.yml ([@matt-edmondson](https://github.com/matt-edmondson))
-- migrate to dotnet 10 ([@matt-edmondson](https://github.com/matt-edmondson))
-- Refactor TextFilter and update CI/CD workflow; streamline regex handling, improve test cases, and enhance build configuration with optional NuGet and Ktsu package keys. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update .editorconfig, .gitignore, .gitattributes, .mailmap, and .runsettings; modify settings for code style, add SpecStory files to .gitignore, and streamline .runsettings for coverage output. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update package references in TextFilter.csproj ([@matt-edmondson](https://github.com/matt-edmondson))
-- Remove obsolete build configuration files and scripts, including Directory.Build.props, Directory.Build.targets, and various PowerShell scripts for metadata and version management. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Enhance README with detailed usage examples and API reference; update project SDK references in .csproj files. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update packages ([@matt-edmondson](https://github.com/matt-edmondson))
+- Match required glob tokens by any word under ByWordAll (Claude)
+- Gate Dependabot auto-merge on CI actually being green (Claude)
+- ci: adopt the consolidated .NET workflow [patch] (Claude)
+- ci: make the SonarQube quality gate opt in [patch] (matt-edmondson)
+- ci: adopt the unified dotnet workflow [patch] (matt-edmondson)
+- chore: store icon.png in LFS as .gitattributes declares (matt-edmondson)
+- docs: scope build badge to the default branch (matt-edmondson)
+- docs: correct README, DESCRIPTION and TAGS metadata (matt-edmondson)
+- Fix build against ktsu.Sdk 2.27.0 (matt-edmondson)
+- Stop Update SDKs failing when there is nothing to update (matt-edmondson)
+- Sync .github\workflows\dotnet.yml (KtsuTools)
+- Sync .editorconfig (KtsuTools)
+- Sync global.json (KtsuTools)
+- Sync .github\workflows\dotnet.yml (KtsuTools)
+- chore: update ktsu.Sdk to 2.21.1 [patch] (matt-edmondson)
+- fix: remove unnecessary SourceLink package references (matt-edmondson)
+- fix: add explicit System.Memory package reference (matt-edmondson)
+- Add TAGS.md with NuGet package tags (matt-edmondson)
+- Sync .github\workflows\dotnet.yml (KtsuTools)
+- Remove legacy build scripts (matt-edmondson)
+- Remove .github\workflows\project.yml (matt-edmondson)
+- migrate to dotnet 10 (matt-edmondson)
+- Refactor TextFilter and update CI/CD workflow; streamline regex handling, improve test cases, and enhance build configuration with optional NuGet and Ktsu package keys. (matt-edmondson)
+- Update .editorconfig, .gitignore, .gitattributes, .mailmap, and .runsettings; modify settings for code style, add SpecStory files to .gitignore, and streamline .runsettings for coverage output. (matt-edmondson)
+- Update package references in TextFilter.csproj (matt-edmondson)
+- Remove obsolete build configuration files and scripts, including Directory.Build.props, Directory.Build.targets, and various PowerShell scripts for metadata and version management. (matt-edmondson)
+- Enhance README with detailed usage examples and API reference; update project SDK references in .csproj files. (matt-edmondson)
+- Update packages (matt-edmondson)
 
 ## v1.5.55 (patch)
 
 Changes since v1.5.54:
 
-- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 11 updates (dependabot[bot])
 
 ## v1.5.54 (patch)
 
 Changes since v1.5.53:
 
-- Bump Polyfill from 11.3.0 to 11.4.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump Polyfill from 11.3.0 to 11.4.0 (dependabot[bot])
+- Bump the ktsu group with 11 updates (dependabot[bot])
 
 ## v1.5.53 (patch)
 
 Changes since v1.5.52:
 
-- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 11 updates (dependabot[bot])
 
 ## v1.5.52 (patch)
 
 Changes since v1.5.51:
 
-- Bump MSTest.Sdk from 4.4.0 to 4.4.1 ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump MSTest.Sdk from 4.4.0 to 4.4.1 (dependabot[bot])
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.5.51 (patch)
 
 Changes since v1.5.50:
 
-- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 11 updates (dependabot[bot])
 
 ## v1.5.50 (patch)
 
 Changes since v1.5.49:
 
-- Gate Dependabot auto-merge on CI actually being green ([@Claude](https://github.com/Claude))
+- Gate Dependabot auto-merge on CI actually being green (Claude)
 
 ## v1.5.49 (patch)
 
 Changes since v1.5.48:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.5.48 (patch)
 
 Changes since v1.5.47:
 
-- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 11 updates (dependabot[bot])
 
 ## v1.5.47 (patch)
 
 Changes since v1.5.46:
 
-- ci: adopt the consolidated .NET workflow [patch] ([@Claude](https://github.com/Claude))
+- ci: adopt the consolidated .NET workflow [patch] (Claude)
 
 ## v1.5.46 (patch)
 
 Changes since v1.5.45:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.5.45 (patch)
 
 Changes since v1.5.44:
 
-- Bump Polyfill from 11.2.0 to 11.3.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump Polyfill from 11.2.0 to 11.3.0 (dependabot[bot])
 
 ## v1.5.44 (patch)
 
 Changes since v1.5.43:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.5.43 (patch)
 
@@ -265,20 +265,20 @@ No significant changes detected since v1.5.42.
 
 Changes since v1.5.41:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.5.41 (patch)
 
 Changes since v1.5.40:
 
-- ci: make the SonarQube quality gate opt in [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
-- ci: adopt the unified dotnet workflow [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- ci: make the SonarQube quality gate opt in [patch] (matt-edmondson)
+- ci: adopt the unified dotnet workflow [patch] (matt-edmondson)
 
 ## v1.5.40 (patch)
 
 Changes since v1.5.39:
 
-- Bump the ktsu group with 9 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 9 updates (dependabot[bot])
 
 ## v1.5.39 (patch)
 
@@ -288,379 +288,379 @@ No significant changes detected since v1.5.38.
 
 Changes since v1.5.37:
 
-- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 11 updates (dependabot[bot])
 
 ## v1.5.37 (patch)
 
 Changes since v1.5.36:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.5.36 (patch)
 
 Changes since v1.5.35:
 
-- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 11 updates (dependabot[bot])
 
 ## v1.5.35 (patch)
 
 Changes since v1.5.34:
 
-- chore: store icon.png in LFS as .gitattributes declares ([@matt-edmondson](https://github.com/matt-edmondson))
-- docs: scope build badge to the default branch ([@matt-edmondson](https://github.com/matt-edmondson))
-- docs: correct README, DESCRIPTION and TAGS metadata ([@matt-edmondson](https://github.com/matt-edmondson))
+- chore: store icon.png in LFS as .gitattributes declares (matt-edmondson)
+- docs: scope build badge to the default branch (matt-edmondson)
+- docs: correct README, DESCRIPTION and TAGS metadata (matt-edmondson)
 
 ## v1.5.34 (patch)
 
 Changes since v1.5.33:
 
-- Fix build against ktsu.Sdk 2.27.0 ([@matt-edmondson](https://github.com/matt-edmondson))
-- Stop Update SDKs failing when there is nothing to update ([@matt-edmondson](https://github.com/matt-edmondson))
-- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
-- Sync .editorconfig ([@KtsuTools](https://github.com/KtsuTools))
-- Sync global.json ([@KtsuTools](https://github.com/KtsuTools))
-- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
+- Fix build against ktsu.Sdk 2.27.0 (matt-edmondson)
+- Stop Update SDKs failing when there is nothing to update (matt-edmondson)
+- Sync .github\workflows\dotnet.yml (KtsuTools)
+- Sync .editorconfig (KtsuTools)
+- Sync global.json (KtsuTools)
+- Sync .github\workflows\dotnet.yml (KtsuTools)
 
 ## v1.5.33 (patch)
 
 Changes since v1.5.32:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.5.32 (patch)
 
 Changes since v1.5.31:
 
-- chore: update ktsu.Sdk to 2.21.1 [patch] ([@matt-edmondson](https://github.com/matt-edmondson))
+- chore: update ktsu.Sdk to 2.21.1 [patch] (matt-edmondson)
 
 ## v1.5.31 (patch)
 
 Changes since v1.5.30:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync global.json (ktsu[bot])
 
 ## v1.5.30 (patch)
 
 Changes since v1.5.29:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.5.29 (patch)
 
 Changes since v1.5.28:
 
-- Sync .github\workflows\update-sdks.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dependabot-merge.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .gitattributes ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\update-sdks.yml (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync .github\workflows\dependabot-merge.yml (ktsu[bot])
+- Sync .gitattributes (ktsu[bot])
 
 ## v1.5.28 (patch)
 
 Changes since v1.5.27:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.5.27 (patch)
 
 Changes since v1.5.26:
 
-- Bump MSTest.Sdk from 4.3.2 to 4.3.3 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump MSTest.Sdk from 4.3.2 to 4.3.3 (dependabot[bot])
 
 ## v1.5.26 (patch)
 
 Changes since v1.5.25:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.5.25 (patch)
 
 Changes since v1.5.24:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.5.24 (patch)
 
 Changes since v1.5.23:
 
-- Bump the ktsu group with 8 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 8 updates (dependabot[bot])
 
 ## v1.5.23 (patch)
 
 Changes since v1.5.22:
 
-- Bump the ktsu group with 3 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 3 updates (dependabot[bot])
 
 ## v1.5.22 (patch)
 
 Changes since v1.5.21:
 
-- Bump the ktsu group with 3 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 3 updates (dependabot[bot])
 
 ## v1.5.21 (patch)
 
 Changes since v1.5.20:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.5.20 (patch)
 
 Changes since v1.5.19:
 
-- Bump MSTest.Sdk from 4.3.0 to 4.3.2 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump MSTest.Sdk from 4.3.0 to 4.3.2 (dependabot[bot])
 
 ## v1.5.19 (patch)
 
 Changes since v1.5.18:
 
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.5.18 (patch)
 
 Changes since v1.5.17:
 
-- Bump MSTest.Sdk from 4.2.3 to 4.3.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
-- Bump the ktsu group with 1 update ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump MSTest.Sdk from 4.2.3 to 4.3.0 (dependabot[bot])
+- Bump the ktsu group with 1 update (dependabot[bot])
 
 ## v1.5.17 (patch)
 
 Changes since v1.5.16:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.5.16 (patch)
 
 Changes since v1.5.15:
 
-- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 11 updates (dependabot[bot])
 
 ## v1.5.15 (patch)
 
 Changes since v1.5.14:
 
-- Bump the ktsu group with 11 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 11 updates (dependabot[bot])
 
 ## v1.5.14 (patch)
 
 Changes since v1.5.13:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.5.13 (patch)
 
 Changes since v1.5.12:
 
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync global.json (ktsu[bot])
 
 ## v1.5.12 (patch)
 
 Changes since v1.5.11:
 
-- fix: remove unnecessary SourceLink package references ([@matt-edmondson](https://github.com/matt-edmondson))
-- fix: add explicit System.Memory package reference ([@matt-edmondson](https://github.com/matt-edmondson))
+- fix: remove unnecessary SourceLink package references (matt-edmondson)
+- fix: add explicit System.Memory package reference (matt-edmondson)
 
 ## v1.5.11 (patch)
 
 Changes since v1.5.10:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.5.10 (patch)
 
 Changes since v1.5.9:
 
-- Add TAGS.md with NuGet package tags ([@matt-edmondson](https://github.com/matt-edmondson))
-- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
+- Add TAGS.md with NuGet package tags (matt-edmondson)
+- Sync .github\workflows\dotnet.yml (KtsuTools)
 
 ## v1.5.10-pre.1 (prerelease)
 
 Changes since v1.5.9:
 
-- Sync .github\workflows\dotnet.yml ([@KtsuTools](https://github.com/KtsuTools))
+- Sync .github\workflows\dotnet.yml (KtsuTools)
 
 ## v1.5.9 (patch)
 
 Changes since v1.5.8:
 
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.5.9-pre.1 (prerelease)
 
 Changes since v1.5.8:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.5.8 (patch)
 
 Changes since v1.5.7:
 
-- Remove legacy build scripts ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove legacy build scripts (matt-edmondson)
 
 ## v1.5.7 (patch)
 
 Changes since v1.5.6:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync COPYRIGHT.md ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync COPYRIGHT.md ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync global.json (ktsu[bot])
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync scripts\update-winget-manifests.ps1 (ktsu[bot])
+- Sync scripts\update-winget-manifests.ps1 (ktsu[bot])
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
+- Sync global.json (ktsu[bot])
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
+- Sync global.json (ktsu[bot])
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync global.json (ktsu[bot])
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync global.json (ktsu[bot])
+- Sync COPYRIGHT.md (ktsu[bot])
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
+- Sync scripts\update-winget-manifests.ps1 (ktsu[bot])
+- Sync global.json (ktsu[bot])
+- Sync COPYRIGHT.md (ktsu[bot])
 
 ## v1.5.7-pre.7 (prerelease)
 
 Changes since v1.5.7-pre.6:
 
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync scripts\update-winget-manifests.ps1 (ktsu[bot])
 
 ## v1.5.7-pre.6 (prerelease)
 
 Changes since v1.5.7-pre.5:
 
-- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\update-winget-manifests.ps1 (ktsu[bot])
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
+- Sync global.json (ktsu[bot])
 
 ## v1.5.7-pre.5 (prerelease)
 
 Changes since v1.5.7-pre.4:
 
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
+- Sync global.json (ktsu[bot])
 
 ## v1.5.7-pre.4 (prerelease)
 
 Changes since v1.5.7-pre.3:
 
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync global.json (ktsu[bot])
 
 ## v1.5.7-pre.3 (prerelease)
 
 Changes since v1.5.7-pre.2:
 
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync COPYRIGHT.md ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync global.json (ktsu[bot])
+- Sync COPYRIGHT.md (ktsu[bot])
 
 ## v1.5.7-pre.2 (prerelease)
 
 Changes since v1.5.7-pre.1:
 
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
 
 ## v1.5.7-pre.1 (prerelease)
 
 Changes since v1.5.6:
 
-- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync global.json ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync COPYRIGHT.md ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\update-winget-manifests.ps1 (ktsu[bot])
+- Sync global.json (ktsu[bot])
+- Sync COPYRIGHT.md (ktsu[bot])
 
 ## v1.5.6 (patch)
 
 Changes since v1.5.5:
 
-- Remove .github\workflows\project.yml ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove .github\workflows\project.yml (matt-edmondson)
 
 ## v1.5.5 (patch)
 
 Changes since v1.5.4:
 
-- migrate to dotnet 10 ([@matt-edmondson](https://github.com/matt-edmondson))
+- migrate to dotnet 10 (matt-edmondson)
 
 ## v1.5.5-pre.4 (prerelease)
 
 Changes since v1.5.5-pre.3:
 
-- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\update-winget-manifests.ps1 (ktsu[bot])
 
 ## v1.5.5-pre.3 (prerelease)
 
 Changes since v1.5.5-pre.2:
 
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.5.5-pre.2 (prerelease)
 
 Changes since v1.5.5-pre.1:
 
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.5.5-pre.1 (prerelease)
 
 Changes since v1.5.4:
 
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\update-winget-manifests.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .gitattributes ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .runsettings ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
+- Sync scripts\update-winget-manifests.ps1 (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync .gitattributes (ktsu[bot])
+- Sync .runsettings (ktsu[bot])
 
 ## v1.5.4 (patch)
 
 Changes since v1.5.3:
 
-- Refactor TextFilter and update CI/CD workflow; streamline regex handling, improve test cases, and enhance build configuration with optional NuGet and Ktsu package keys. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update .editorconfig, .gitignore, .gitattributes, .mailmap, and .runsettings; modify settings for code style, add SpecStory files to .gitignore, and streamline .runsettings for coverage output. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor TextFilter and update CI/CD workflow; streamline regex handling, improve test cases, and enhance build configuration with optional NuGet and Ktsu package keys. (matt-edmondson)
+- Update .editorconfig, .gitignore, .gitattributes, .mailmap, and .runsettings; modify settings for code style, add SpecStory files to .gitignore, and streamline .runsettings for coverage output. (matt-edmondson)
 
 ## v1.5.3 (patch)
 
 Changes since v1.5.2:
 
-- Update package references in TextFilter.csproj ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update package references in TextFilter.csproj (matt-edmondson)
 
 ## v1.5.3-pre.17 (prerelease)
 
 Changes since v1.5.3-pre.16:
 
-- Merge remote-tracking branch 'refs/remotes/origin/main' ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .editorconfig ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .gitattributes ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .gitignore ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .mailmap ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .runsettings ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Merge remote-tracking branch 'refs/remotes/origin/main' (ktsu[bot])
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
+- Sync .editorconfig (ktsu[bot])
+- Sync .gitattributes (ktsu[bot])
+- Sync .gitignore (ktsu[bot])
+- Sync .mailmap (ktsu[bot])
+- Sync .runsettings (ktsu[bot])
 
 ## v1.5.3-pre.16 (prerelease)
 
 Changes since v1.5.3-pre.15:
 
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .editorconfig ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .gitattributes ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .gitignore ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .mailmap ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .runsettings ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
+- Sync .editorconfig (ktsu[bot])
+- Sync .gitattributes (ktsu[bot])
+- Sync .gitignore (ktsu[bot])
+- Sync .mailmap (ktsu[bot])
+- Sync .runsettings (ktsu[bot])
 
 ## v1.5.3-pre.15 (prerelease)
 
@@ -722,114 +722,114 @@ No significant changes detected since v1.5.3-pre.1.
 
 Changes since v1.5.2:
 
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\PSBuild.psm1 (ktsu[bot])
 
 ## v1.5.2 (patch)
 
 Changes since v1.5.1:
 
-- Remove obsolete build configuration files and scripts, including Directory.Build.props, Directory.Build.targets, and various PowerShell scripts for metadata and version management. ([@matt-edmondson](https://github.com/matt-edmondson))
-- Enhance README with detailed usage examples and API reference; update project SDK references in .csproj files. ([@matt-edmondson](https://github.com/matt-edmondson))
+- Remove obsolete build configuration files and scripts, including Directory.Build.props, Directory.Build.targets, and various PowerShell scripts for metadata and version management. (matt-edmondson)
+- Enhance README with detailed usage examples and API reference; update project SDK references in .csproj files. (matt-edmondson)
 
 ## v1.5.2-pre.2 (prerelease)
 
 Changes since v1.5.2-pre.1:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .editorconfig ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .runsettings ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync .editorconfig (ktsu[bot])
+- Sync .runsettings (ktsu[bot])
 
 ## v1.5.2-pre.1 (prerelease)
 
 Changes since v1.5.1:
 
-- Sync .editorconfig ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .editorconfig (ktsu[bot])
 
 ## v1.5.1 (patch)
 
 Changes since v1.5.0:
 
-- Update packages ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update packages (matt-edmondson)
 
 ## v1.5.0 (minor)
 
 Changes since v1.4.0:
 
-- Add LICENSE template ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update packages ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add LICENSE template (matt-edmondson)
+- Update packages (matt-edmondson)
 
 ## v1.4.1 (patch)
 
 Changes since v1.4.0:
 
-- Update packages ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update packages (matt-edmondson)
 
 ## v1.4.1-pre.3 (prerelease)
 
 Changes since v1.4.1-pre.2:
 
-- Sync scripts\make-version.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\make-changelog.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\make-version.ps1 (ktsu[bot])
+- Sync scripts\make-changelog.ps1 (ktsu[bot])
 
 ## v1.4.1-pre.2 (prerelease)
 
 Changes since v1.4.1-pre.1:
 
-- Sync scripts\make-version.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\make-changelog.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .editorconfig ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .gitignore ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync Directory.Build.targets ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\make-version.ps1 (ktsu[bot])
+- Sync scripts\make-changelog.ps1 (ktsu[bot])
+- Sync .editorconfig (ktsu[bot])
+- Sync .gitignore (ktsu[bot])
+- Sync Directory.Build.targets (ktsu[bot])
 
 ## v1.4.1-pre.1 (prerelease)
 
 Changes since v1.4.0:
 
-- Bump ktsu.Extensions from 1.3.2 to 1.4.0 in the ktsu group ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump ktsu.Extensions from 1.3.2 to 1.4.0 in the ktsu group (dependabot[bot])
 
 ## v1.4.0 (minor)
 
 Changes since v1.3.0:
 
-- Apply new editorconfig ([@matt-edmondson](https://github.com/matt-edmondson))
+- Apply new editorconfig (matt-edmondson)
 
 ## v1.3.2-pre.26 (prerelease)
 
 Changes since v1.3.2-pre.25:
 
-- Bump Microsoft.DotNet.ILCompiler in the microsoft group ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump Microsoft.DotNet.ILCompiler in the microsoft group (dependabot[bot])
 
 ## v1.3.2-pre.25 (prerelease)
 
 Changes since v1.3.2-pre.24:
 
-- Sync scripts\make-version.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\make-changelog.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\make-version.ps1 (ktsu[bot])
+- Sync scripts\make-changelog.ps1 (ktsu[bot])
 
 ## v1.3.2-pre.24 (prerelease)
 
 Changes since v1.3.2-pre.23:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.3.2-pre.23 (prerelease)
 
 Changes since v1.3.2-pre.22:
 
-- Sync scripts\make-version.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\make-changelog.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\make-version.ps1 (ktsu[bot])
+- Sync scripts\make-changelog.ps1 (ktsu[bot])
 
 ## v1.3.2-pre.22 (prerelease)
 
 Changes since v1.3.2-pre.21:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.3.2-pre.21 (prerelease)
 
 Changes since v1.3.2-pre.20:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.3.2-pre.20 (prerelease)
 
@@ -843,7 +843,7 @@ No significant changes detected since v1.3.2-pre.18.
 
 Changes since v1.3.2-pre.17:
 
-- Bump MSTest from 3.7.2 to 3.7.3 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump MSTest from 3.7.2 to 3.7.3 (dependabot[bot])
 
 ## v1.3.2-pre.17 (prerelease)
 
@@ -857,13 +857,13 @@ No significant changes detected since v1.3.2-pre.15.
 
 Changes since v1.3.2-pre.14:
 
-- Bump MSTest from 3.7.1 to 3.7.2 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump MSTest from 3.7.1 to 3.7.2 (dependabot[bot])
 
 ## v1.3.2-pre.14 (prerelease)
 
 Changes since v1.3.2-pre.13:
 
-- Bump coverlet.collector from 6.0.3 to 6.0.4 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump coverlet.collector from 6.0.3 to 6.0.4 (dependabot[bot])
 
 ## v1.3.2-pre.13 (prerelease)
 
@@ -877,13 +877,13 @@ No significant changes detected since v1.3.2-pre.11.
 
 Changes since v1.3.2-pre.10:
 
-- Bump Microsoft.DotNet.ILCompiler in the microsoft group ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump Microsoft.DotNet.ILCompiler in the microsoft group (dependabot[bot])
 
 ## v1.3.2-pre.10 (prerelease)
 
 Changes since v1.3.2-pre.9:
 
-- Bump MSTest from 3.7.0 to 3.7.1 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump MSTest from 3.7.0 to 3.7.1 (dependabot[bot])
 
 ## v1.3.2-pre.9 (prerelease)
 
@@ -897,14 +897,14 @@ No significant changes detected since v1.3.2-pre.7.
 
 Changes since v1.3.2-pre.6:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.3.2-pre.6 (prerelease)
 
 Changes since v1.3.2-pre.5:
 
-- Sync scripts\make-version.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\make-changelog.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\make-version.ps1 (ktsu[bot])
+- Sync scripts\make-changelog.ps1 (ktsu[bot])
 
 ## v1.3.2-pre.5 (prerelease)
 
@@ -914,7 +914,7 @@ No significant changes detected since v1.3.2-pre.4.
 
 Changes since v1.3.2-pre.3:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.3.2-pre.3 (prerelease)
 
@@ -924,36 +924,36 @@ No significant changes detected since v1.3.2-pre.2.
 
 Changes since v1.3.2-pre.1:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.3.2-pre.1 (prerelease)
 
 Changes since v1.3.1:
 
-- Sync scripts\make-version.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync scripts\make-version.ps1 (ktsu[bot])
 
 ## v1.3.1 (patch)
 
 Changes since v1.3.0:
 
-- Sync .mailmap ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\make-changelog.ps1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .mailmap (ktsu[bot])
+- Sync scripts\make-changelog.ps1 (ktsu[bot])
 
 ## v1.3.0 (minor)
 
 Changes since v1.2.0:
 
-- Add test for DoesMatchGlob with partial filter ([@matt-edmondson](https://github.com/matt-edmondson))
-- Properly handle partially constructed glob filters that have prefixes ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add test for DoesMatchGlob with partial filter (matt-edmondson)
+- Properly handle partially constructed glob filters that have prefixes (matt-edmondson)
 
 ## v1.2.0 (minor)
 
 Changes since v1.1.0:
 
-- Add unit tests for TextFilter regex and glob matching ([@matt-edmondson](https://github.com/matt-edmondson))
-- Fix empty / invalid filter behaviour ([@matt-edmondson](https://github.com/matt-edmondson))
-- Add scripts for automated metadata generation and project management ([@matt-edmondson](https://github.com/matt-edmondson))
-- Renamed metadata files ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add unit tests for TextFilter regex and glob matching (matt-edmondson)
+- Fix empty / invalid filter behaviour (matt-edmondson)
+- Add scripts for automated metadata generation and project management (matt-edmondson)
+- Renamed metadata files (matt-edmondson)
 
 ## v1.1.5
 
@@ -963,7 +963,7 @@ No significant changes detected since v1.1.5-pre.7.
 
 Changes since v1.1.5-pre.6:
 
-- Add scripts for automated metadata generation and project management ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add scripts for automated metadata generation and project management (matt-edmondson)
 
 ## v1.1.5-pre.6 (prerelease)
 
@@ -973,13 +973,13 @@ No significant changes detected since v1.1.5-pre.5.
 
 Changes since v1.1.5-pre.4:
 
-- Bump coverlet.collector from 6.0.2 to 6.0.3 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump coverlet.collector from 6.0.2 to 6.0.3 (dependabot[bot])
 
 ## v1.1.5-pre.4 (prerelease)
 
 Changes since v1.1.5-pre.3:
 
-- Bump ktsu.Extensions from 1.2.14 to 1.3.1 in the ktsu group ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump ktsu.Extensions from 1.2.14 to 1.3.1 in the ktsu group (dependabot[bot])
 
 ## v1.1.5-pre.3 (prerelease)
 
@@ -989,173 +989,173 @@ No significant changes detected since v1.1.5-pre.2.
 
 Changes since v1.1.5-pre.1:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.1.5-pre.1 (prerelease)
 
 Changes since v1.1.4-pre.1:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.1.4-pre.1 (prerelease)
 
 Changes since v1.1.3-pre.1:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.1.3-pre.1 (prerelease)
 
 Changes since v1.1.2-pre.1:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.1.2-pre.1 (prerelease)
 
 Changes since v1.1.1:
 
-- Renamed metadata files ([@matt-edmondson](https://github.com/matt-edmondson))
+- Renamed metadata files (matt-edmondson)
 
 ## v1.1.1 (patch)
 
 Changes since v1.1.0:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.1.0 (minor)
 
 Changes since v1.0.0:
 
-- Add key selector support to Filter and Rank methods ([@matt-edmondson](https://github.com/matt-edmondson))
-- Replace LICENSE file with LICENSE.md and update copyright information ([@matt-edmondson](https://github.com/matt-edmondson))
-- Refactor test method names in TextFilterTests.cs ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update LICENSE file to LICENSE.md with MIT License ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update TextFilter library description ([@matt-edmondson](https://github.com/matt-edmondson))
+- Add key selector support to Filter and Rank methods (matt-edmondson)
+- Replace LICENSE file with LICENSE.md and update copyright information (matt-edmondson)
+- Refactor test method names in TextFilterTests.cs (matt-edmondson)
+- Update LICENSE file to LICENSE.md with MIT License (matt-edmondson)
+- Update TextFilter library description (matt-edmondson)
 
 ## v1.0.19 (patch)
 
 Changes since v1.0.18:
 
-- Sync icon.png ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync icon.png (ktsu[bot])
 
 ## v1.0.18 (patch)
 
 Changes since v1.0.17:
 
-- Sync Directory.Build.props ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync Directory.Build.props (ktsu[bot])
 
 ## v1.0.17 (patch)
 
 Changes since v1.0.16:
 
-- Sync Directory.Build.props ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync Directory.Build.props (ktsu[bot])
 
 ## v1.0.16 (patch)
 
 Changes since v1.0.15:
 
-- Sync Directory.Build.props ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync Directory.Build.props (ktsu[bot])
 
 ## v1.0.15 (patch)
 
 Changes since v1.0.14:
 
-- Replace LICENSE file with LICENSE.md and update copyright information ([@matt-edmondson](https://github.com/matt-edmondson))
+- Replace LICENSE file with LICENSE.md and update copyright information (matt-edmondson)
 
 ## v1.0.14 (patch)
 
 Changes since v1.0.13:
 
-- Sync Directory.Build.targets ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync Directory.Build.targets (ktsu[bot])
 
 ## v1.0.13 (patch)
 
 Changes since v1.0.12:
 
-- Refactor test method names in TextFilterTests.cs ([@matt-edmondson](https://github.com/matt-edmondson))
-- Update LICENSE file to LICENSE.md with MIT License ([@matt-edmondson](https://github.com/matt-edmondson))
+- Refactor test method names in TextFilterTests.cs (matt-edmondson)
+- Update LICENSE file to LICENSE.md with MIT License (matt-edmondson)
 
 ## v1.0.12 (patch)
 
 Changes since v1.0.11:
 
-- Bump ktsu.Extensions from 1.2.6 to 1.2.7 in the ktsu group ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump ktsu.Extensions from 1.2.6 to 1.2.7 in the ktsu group (dependabot[bot])
 
 ## v1.0.11 (patch)
 
 Changes since v1.0.10:
 
-- Bump the ktsu group with 2 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the ktsu group with 2 updates (dependabot[bot])
 
 ## v1.0.10 (patch)
 
 Changes since v1.0.9:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.0.9 (patch)
 
 Changes since v1.0.8:
 
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.0.8 (patch)
 
 Changes since v1.0.7:
 
-- Updated packages in TextFilter.csproj ([@matt-edmondson](https://github.com/matt-edmondson))
+- Updated packages in TextFilter.csproj (matt-edmondson)
 
 ## v1.0.7 (patch)
 
 Changes since v1.0.6:
 
-- Updated packages in TextFilter.csproj ([@matt-edmondson](https://github.com/matt-edmondson))
+- Updated packages in TextFilter.csproj (matt-edmondson)
 
 ## v1.0.6 (patch)
 
 Changes since v1.0.5:
 
-- Updated packages in TextFilter.csproj ([@matt-edmondson](https://github.com/matt-edmondson))
+- Updated packages in TextFilter.csproj (matt-edmondson)
 
 ## v1.0.5 (patch)
 
 Changes since v1.0.4:
 
-- Sync Directory.Build.targets ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync Directory.Build.props ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync Directory.Build.targets (ktsu[bot])
+- Sync Directory.Build.props (ktsu[bot])
 
 ## v1.0.4 (patch)
 
 Changes since v1.0.3:
 
-- Updated packages in TextFilter.csproj ([@matt-edmondson](https://github.com/matt-edmondson))
+- Updated packages in TextFilter.csproj (matt-edmondson)
 
 ## v1.0.3 (patch)
 
 Changes since v1.0.2:
 
-- Updated packages in TextFilter.csproj ([@matt-edmondson](https://github.com/matt-edmondson))
+- Updated packages in TextFilter.csproj (matt-edmondson)
 
 ## v1.0.2 (patch)
 
 Changes since v1.0.1:
 
-- Sync Directory.Build.targets ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync Directory.Build.targets ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync Directory.Build.props ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync Directory.Build.props ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync Directory.Build.targets ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .github\workflows\dotnet.yml ([@ktsu[bot]](https://github.com/ktsu[bot]))
+- Sync Directory.Build.targets (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
+- Sync Directory.Build.targets (ktsu[bot])
+- Sync Directory.Build.props (ktsu[bot])
+- Sync Directory.Build.props (ktsu[bot])
+- Sync Directory.Build.targets (ktsu[bot])
+- Sync .github\workflows\dotnet.yml (ktsu[bot])
 
 ## v1.0.1 (patch)
 
 Changes since v1.0.0:
 
-- Update TextFilter library description ([@matt-edmondson](https://github.com/matt-edmondson))
+- Update TextFilter library description (matt-edmondson)
 
 ## v1.0.0 (major)
 
-- Additional documentation ([@matt-edmondson](https://github.com/matt-edmondson))
-- Initial commit ([@matt-edmondson](https://github.com/matt-edmondson))
+- Additional documentation (matt-edmondson)
+- Initial commit (matt-edmondson)
 

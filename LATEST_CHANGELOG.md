@@ -2,5 +2,5 @@
 
 Changes since v1.7.13:
 
-- Match a trailing dash in a glob class literally [patch] ([@Claude](https://github.com/Claude))
+- Match a trailing dash in a glob class literally [patch] (Claude)
 
