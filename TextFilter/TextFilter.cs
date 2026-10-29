@@ -498,41 +498,40 @@ public static partial class TextFilter
 				break;
 			}
 
-			int contentStart = open + 1;
-			bool negated = contentStart < token.Length && token[contentStart] == '!';
-			if (negated)
-			{
-				contentStart++;
-			}
-
-			// A "]" straight after the opening bracket is a member of the class rather than its end.
-			int close = contentStart < token.Length ? token.IndexOf(']', contentStart + 1) : -1;
+			int close = FindGlobClassEnd(token, open, out bool negated, out int contentStart);
 			if (close < 0)
 			{
 				break;
 			}
 
 			string content = token[contentStart..close];
-			result.Append(token, index, open - index);
-			if (!content.Contains('-') || IsNativeGlobRange(content))
+			string? rewritten = !content.Contains('-') || IsNativeGlobRange(content)
+				? token[open..(close + 1)]
+				: ToGlobCharacterList(content, negated);
+			if (rewritten is null)
 			{
-				result.Append(token, open, close + 1 - open);
-			}
-			else
-			{
-				string? list = ToGlobCharacterList(content, negated);
-				if (list is null)
-				{
-					return null;
-				}
-
-				result.Append(list);
+				return null;
 			}
 
+			result.Append(token, index, open - index).Append(rewritten);
 			index = close + 1;
 		}
 
 		return result.Append(token, index, token.Length - index).ToString();
+	}
+
+	// Returns the index of the "]" closing the class opened at "open", or -1 if it is never closed.
+	private static int FindGlobClassEnd(string token, int open, out bool negated, out int contentStart)
+	{
+		contentStart = open + 1;
+		negated = contentStart < token.Length && token[contentStart] == '!';
+		if (negated)
+		{
+			contentStart++;
+		}
+
+		// A "]" straight after the opening bracket is a member of the class rather than its end.
+		return contentStart < token.Length ? token.IndexOf(']', contentStart + 1) : -1;
 	}
 
 	private static bool IsNativeGlobRange(string content) =>
