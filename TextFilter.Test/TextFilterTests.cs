@@ -967,15 +967,75 @@ public class TextFilterTests
 	[TestMethod]
 	[DataRow("file[a-]", "file[-a]")]
 	[DataRow("file[!a-]", "file[!-a]")]
-	[DataRow("[0-9a-]x[b-]", "[-0-9a]x[-b]")]
-	[DataRow("[]-]", "[-]]")]
+	[DataRow("[0-9a-]x[b-]", "[-0123456789a]x[-b]")]
+	[DataRow("[0-9a-f]", "[0123456789abcdef]")]
+	[DataRow("[!0-9a-f]", "[!0123456789abcdef]")]
+	[DataRow("[a-c_]", "[_abc]")]
+	[DataRow("[]-]", "[]-]")]
+	[DataRow("[]a-]", "[]-a]")]
+	[DataRow("[!]a-]", "[!]-a]")]
 	[DataRow("[-]", "[-]")]
 	[DataRow("[a-z]", "[a-z]")]
+	[DataRow("[!0-9]", "[!0-9]")]
+	[DataRow("[abc]", "[abc]")]
+	[DataRow("[!-#]", "[!-#]")]
+	[DataRow("[ !-#]", "[ \"#!]")]
 	[DataRow("file[0-", "file[0-")]
 	[DataRow("a]b", "a]b")]
 	[DataRow("[a-]x[0-", "[-a]x[0-")]
-	public void MoveTrailingClassDashesRewritesOnlyClosedClasses(string token, string expected) =>
-		Assert.AreEqual(expected, TextFilter.MoveTrailingClassDashes(token));
+	public void ExpandGlobClassesRewritesOnlyClassesDotNetGlobMisreads(string token, string expected) =>
+		Assert.AreEqual(expected, TextFilter.ExpandGlobClasses(token));
+
+	[TestMethod]
+	[DataRow("[#-!]")]
+	[DataRow("[\u0001-\uffff_]")]
+	public void ExpandGlobClassesRejectsClassesThatCannotBeListed(string token) =>
+		Assert.IsNull(TextFilter.ExpandGlobClasses(token));
+
+	[TestMethod]
+	[DataRow("[0-9a-f]", "0 5 9 a c f", "g G - x _")]
+	[DataRow("[!0-9a-f]", "g - x _", "0 5 a c f")]
+	[DataRow("[a-z_]", "a q z _", "- 5 #")]
+	[DataRow("[-0-9]", "- 0 5 9", "a _")]
+	[DataRow("[ab-d]", "a b c d", "- e")]
+	[DataRow("[a-z-]", "q a z -", "5 _")]
+	[DataRow("file[0-9a-]", "file5 filea file-", "fileb file_")]
+	[DataRow("[]a-]", "a - ]", "b [")]
+	[DataRow("[!]a-]", "b [", "a - ]")]
+	[DataRow("[!-#]", "a $ ! \"", "- #")]
+	public void GlobClassMatchesEveryMemberOfEveryRange(string pattern, string matching, string notMatching)
+	{
+		// DotNet.Glob reads a class as one range or one plain list, never both, so a class mixing a range
+		// with other members silently dropped some of them (#152), and moving a trailing dash to the front
+		// pushed classes it read correctly into list mode (#153).
+		ArgumentNullException.ThrowIfNull(matching);
+		ArgumentNullException.ThrowIfNull(notMatching);
+		foreach (TextFilterCaseSensitivity caseSensitivity in new[] { TextFilterCaseSensitivity.CaseSensitive, TextFilterCaseSensitivity.CaseInsensitive })
+		{
+			foreach (string text in matching.Split(' '))
+			{
+				Assert.IsTrue(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity), $"{pattern} should match {text} ({caseSensitivity})");
+			}
+
+			foreach (string text in notMatching.Split(' '))
+			{
+				Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity), $"{pattern} should not match {text} ({caseSensitivity})");
+			}
+		}
+	}
+
+	[TestMethod]
+	public void GlobClassWithBothLetterCasesMatchesEachCase()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("Q", "[a-zA-Z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+		Assert.IsTrue(TextFilter.IsMatch("q", "[a-zA-Z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+		Assert.IsFalse(TextFilter.IsMatch("_", "[a-zA-Z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+
+		// Case folding still applies to the expanded list, in both directions.
+		Assert.IsTrue(TextFilter.IsMatch("C", "[0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+		Assert.IsFalse(TextFilter.IsMatch("C", "[0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+		Assert.IsFalse(TextFilter.IsMatch("C", "[!0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+	}
 
 	[TestMethod]
 	[DataRow("-readme[a-")]

@@ -467,11 +467,21 @@ public static partial class TextFilter
 		return [.. expansions.Select(prefix => prefix + tail).Distinct(StringComparer.Ordinal)];
 	}
 
-	// In glob syntax a "-" just before the closing "]" is a literal dash, so "[a-]" matches "a" or "-".
-	// DotNet.Glob's tokeniser reads it as a range left open and throws, as it does for the half-typed
-	// "[a-", so the dash is moved to the front of the class ("[-a]", "[!-a]"), a form it does parse.
-	// A class with no closing "]" is left alone and stays unparseable.
-	internal static string MoveTrailingClassDashes(string token)
+	// DotNet.Glob reads a bracket class as exactly one token: a single range when it starts "x-y" with
+	// two letters or two digits, otherwise a plain character list in which "-" is a member and no ranges
+	// are read. It never combines the two, so "[0-9a-f]" stops at the 0-9 range and misses "c", while
+	// "[-0-9]" and "[ab-d]" become lists that miss "5" and "c". A trailing dash ("[a-]") makes its
+	// tokeniser throw outright. So every closed class it would misread is rewritten here into the
+	// explicit character list it means, which it does read correctly, negation and case folding
+	// included: "[0-9a-f]" becomes "[0123456789abcdef]" and "[a-z-]" becomes "[-abc...z]". A lone
+	// letter or digit range is left for DotNet.Glob to match natively, since it reads that form
+	// correctly and it may span far more characters than are worth listing. A class with no closing
+	// "]" is left alone and stays unparseable.
+	// Returns null for a class that cannot be written as a list: one whose ranges span more than
+	// MaxGlobClassMembers characters, or that has no members at all because every range is reversed.
+	private const int MaxGlobClassMembers = 4096;
+
+	internal static string? ExpandGlobClasses(string token)
 	{
 		if (!token.Contains(']'))
 		{
@@ -489,8 +499,11 @@ public static partial class TextFilter
 			}
 
 			int contentStart = open + 1;
-			string negation = contentStart < token.Length && token[contentStart] == '!' ? "!" : string.Empty;
-			contentStart += negation.Length;
+			bool negated = contentStart < token.Length && token[contentStart] == '!';
+			if (negated)
+			{
+				contentStart++;
+			}
 
 			// A "]" straight after the opening bracket is a member of the class rather than its end.
 			int close = contentStart < token.Length ? token.IndexOf(']', contentStart + 1) : -1;
@@ -500,21 +513,99 @@ public static partial class TextFilter
 			}
 
 			string content = token[contentStart..close];
-			result.Append(token, index, open - index).Append('[').Append(negation);
-			if (content.Length > 1 && content[^1] == '-')
+			result.Append(token, index, open - index);
+			if (!content.Contains('-') || IsNativeGlobRange(content))
 			{
-				result.Append('-').Append(content, 0, content.Length - 1);
+				result.Append(token, open, close + 1 - open);
 			}
 			else
 			{
-				result.Append(content);
+				string? list = ToGlobCharacterList(content, negated);
+				if (list is null)
+				{
+					return null;
+				}
+
+				result.Append(list);
 			}
 
-			result.Append(']');
 			index = close + 1;
 		}
 
 		return result.Append(token, index, token.Length - index).ToString();
+	}
+
+	private static bool IsNativeGlobRange(string content) =>
+		content.Length == 3 && content[1] == '-' && content[0] != ']'
+		&& ((char.IsLetter(content[0]) && char.IsLetter(content[2])) || (char.IsAsciiDigit(content[0]) && char.IsAsciiDigit(content[2])));
+
+	// Reads the class members with the usual glob rules (a leading "]" and a leading or trailing "-" are
+	// literal, "x-y" is an inclusive range) and writes them in an order DotNet.Glob reads as a plain list:
+	// "]" first, so it does not close the class, then "-", so no member pair looks like a range, and "!"
+	// never first, so it is not read as negation.
+	private static string? ToGlobCharacterList(string content, bool negated)
+	{
+		SortedSet<char> members = [];
+		int i = 0;
+		while (i < content.Length)
+		{
+			char first = content[i];
+			bool isRange = i + 2 < content.Length && content[i + 1] == '-' && !(i == 0 && first == ']');
+			if (!isRange)
+			{
+				members.Add(first);
+				i++;
+				continue;
+			}
+
+			char last = content[i + 2];
+			if (last - first + members.Count >= MaxGlobClassMembers)
+			{
+				return null;
+			}
+
+			for (int member = first; member <= last; member++)
+			{
+				members.Add((char)member);
+			}
+
+			i += 3;
+		}
+
+		if (members.Count == 0)
+		{
+			return null;
+		}
+
+		StringBuilder list = new(members.Count + 3);
+		list.Append('[');
+		if (negated)
+		{
+			list.Append('!');
+		}
+
+		if (members.Remove(']'))
+		{
+			list.Append(']');
+		}
+
+		if (members.Remove('-'))
+		{
+			list.Append('-');
+		}
+
+		bool hasBang = members.Remove('!');
+		foreach (char member in members)
+		{
+			list.Append(member);
+		}
+
+		if (hasBang)
+		{
+			list.Append('!');
+		}
+
+		return list.Append(']').ToString();
 	}
 
 	// Returns null for a token that cannot be parsed, so each caller can decide what ignoring it means.
@@ -526,8 +617,8 @@ public static partial class TextFilter
 		{
 			try
 			{
-				string maskedToken = MaskPathSeparators(MoveTrailingClassDashes(filterToken));
-				globs = [.. ExpandGlobStarSegments(maskedToken).Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
+				string? expandedToken = ExpandGlobClasses(filterToken);
+				globs = expandedToken is null ? null : [.. ExpandGlobStarSegments(MaskPathSeparators(expandedToken)).Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
 					? Glob.Parse(pattern, CaseInsensitiveGlobOptions)
 					: Glob.Parse(pattern))];
 			}
