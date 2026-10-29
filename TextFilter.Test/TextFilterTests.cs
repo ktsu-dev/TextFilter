@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu-dev contributors
+﻿// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace TextFilter.Test;
 
@@ -1166,5 +1166,68 @@ public class TextFilterTests
 		List<string> result = [.. TextFilter.Filter(strings, paddedFilter, TextFilterType.Fuzzy)];
 		CollectionAssert.AreEquivalent(HelMatches, result,
 			$"Padding in '{paddedFilter}' should not hide items that 'hel' matches.");
+	}
+
+	[TestMethod]
+	[DataRow(TextFilterType.Glob, "*.cs")]
+	[DataRow(TextFilterType.Regex, "\\.cs$")]
+	public void FilterTakeStopsReadingOnceEnoughGlobOrRegexItemsMatch(TextFilterType filterType, string filter)
+	{
+		IEnumerable<string> items = Enumerable.Range(0, 10_000).Select(i => $"File{i}.cs");
+		int calls = 0;
+		string CountingKey(string s)
+		{
+			calls++;
+			return s;
+		}
+
+		List<string> page = [.. TextFilter.Filter(items, CountingKey, filter, filterType).Take(10)];
+
+		CollectionAssert.AreEqual(items.Take(10).ToList(), page);
+		Assert.AreEqual(10, calls, "Only the items needed for the first page should be matched.");
+	}
+
+	[TestMethod]
+	public void FilterGlobFirstDoesNotReadPastTheFirstMatch()
+	{
+		// Stands in for an endless or streaming source: reading past the first page fails the test
+		// rather than hanging it.
+		static IEnumerable<string> StreamingLines()
+		{
+			for (int i = 0; i < 1_000; i++)
+			{
+				yield return i % 3 == 2 ? $"line{i}.log" : $"line{i}.txt";
+			}
+
+			throw new InvalidOperationException("Filter read the whole source before yielding its first match.");
+		}
+
+		Assert.AreEqual("line2.log", TextFilter.Filter(StreamingLines(), "*.log").First());
+	}
+
+	[TestMethod]
+	[DataRow(TextFilterType.Glob, "b* a*")]
+	[DataRow(TextFilterType.Regex, "^(b|a)")]
+	public void FilterGlobOrRegexKeepsInputOrder(TextFilterType filterType, string filter)
+	{
+		List<string> strings = ["banana", "cherry", "apple", "blueberry", "avocado"];
+		List<string> result = [.. TextFilter.Filter(strings, filter, filterType)];
+		CollectionAssert.AreEqual(new List<string> { "banana", "apple", "blueberry", "avocado" }, result);
+	}
+
+	[TestMethod]
+	public void FilterFuzzyStillSortsByDescendingScore()
+	{
+		List<string> strings = ["hello world", "yellow", "hello", "help"];
+		List<string> result = [.. TextFilter.Filter(strings, "hello", TextFilterType.Fuzzy)];
+		static int ScoreOf(string s)
+		{
+			TextFilter.IsMatch(s, "hello", out int score, TextFilterType.Fuzzy);
+			return score;
+		}
+
+		List<int> scores = [.. result.Select(ScoreOf)];
+		CollectionAssert.AreEqual(scores.OrderByDescending(s => s).ToList(), scores);
+		Assert.IsNotEmpty(result);
 	}
 }
