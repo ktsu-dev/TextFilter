@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu-dev contributors
+﻿// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.TextFilter;
 
@@ -248,8 +248,9 @@ public static partial class TextFilter
 			{
 				TextFilterType.Glob => DoesMatchGlob(text, filter, textFilterMatchOptions, caseSensitivity),
 				TextFilterType.Regex => DoesMatchRegex(text, filter, textFilterMatchOptions, caseSensitivity),
-				// Padding would otherwise become a space the text must contain, so " hel" matched nothing.
-				TextFilterType.Fuzzy => Fuzzy.Contains(text.AsSpan(), filter.AsSpan().Trim(), out score),
+				// Whitespace would otherwise become a character the text must contain, so " hel" matched
+				// nothing and "open file" missed OpenFile.cs, while glob and regex split on it instead.
+				TextFilterType.Fuzzy => Fuzzy.Contains(text.AsSpan(), RemoveWhitespace(filter).AsSpan(), out score),
 				_ => throw new NotImplementedException($"{nameof(TextFilterType)}.{filterType} has not been implemented"),
 			};
 	}
@@ -265,6 +266,11 @@ public static partial class TextFilter
 	/// <returns><c>true</c> if the text matches the filter pattern; otherwise, <c>false</c>.</returns>
 	public static bool IsMatch(string text, string filter, TextFilterType filterType = TextFilterType.Glob, TextFilterMatchOptions textFilterMatchOptions = TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
 		=> IsMatch(text, filter, out _, filterType, textFilterMatchOptions, caseSensitivity);
+
+	// Filter is called once per item with the same filter, so a filter with no whitespace inside it,
+	// the usual case, is returned as is rather than copied on every call.
+	private static string RemoveWhitespace(string value) =>
+		value.Any(char.IsWhiteSpace) ? new string([.. value.Where(c => !char.IsWhiteSpace(c))]) : value;
 
 	internal static HashSet<string> ExtractTextTokens(string text, TextFilterMatchOptions textFilterMatchOptions)
 	{

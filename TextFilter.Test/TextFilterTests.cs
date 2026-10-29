@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu-dev contributors
+﻿// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace TextFilter.Test;
 
@@ -1166,5 +1166,32 @@ public class TextFilterTests
 		List<string> result = [.. TextFilter.Filter(strings, paddedFilter, TextFilterType.Fuzzy)];
 		CollectionAssert.AreEquivalent(HelMatches, result,
 			$"Padding in '{paddedFilter}' should not hide items that 'hel' matches.");
+	}
+
+	private static readonly string[] OpenFileCandidates = ["OpenFile.cs", "open_file.cs", "SaveFile.cs", "open file dialog"];
+	private static readonly string[] OpenFileMatches = ["OpenFile.cs", "open_file.cs", "open file dialog"];
+
+	[TestMethod]
+	[DataRow("open file")]
+	[DataRow("open  file")]
+	[DataRow("open\tfile")]
+	[DataRow(" open file ")]
+	public void FuzzyFilterIgnoresWhitespaceInsideTheFilter(string filter)
+	{
+		List<string> result = [.. TextFilter.Filter(OpenFileCandidates, filter, TextFilterType.Fuzzy)];
+		CollectionAssert.AreEquivalent(OpenFileMatches, result,
+			$"Whitespace in '{filter}' should not hide items that 'openfile' matches.");
+	}
+
+	[TestMethod]
+	[DataRow("open file")]
+	[DataRow("open\tfile")]
+	public void FuzzyIsMatchTreatsInnerWhitespaceLikeNoWhitespace(string filter)
+	{
+		foreach (string text in OpenFileCandidates)
+		{
+			Assert.AreEqual(TextFilter.IsMatch(text, "openfile", TextFilterType.Fuzzy), TextFilter.IsMatch(text, filter, TextFilterType.Fuzzy),
+				$"Whitespace in '{filter}' should not change whether '{text}' fuzzy-matches.");
+		}
 	}
 }
