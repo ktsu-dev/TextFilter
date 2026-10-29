@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu-dev contributors
+﻿// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace ktsu.TextFilter;
 
@@ -313,7 +313,8 @@ public static partial class TextFilter
 	/// <returns><c>true</c> if the text matches the glob filter pattern; otherwise, <c>false</c>.</returns>
 	/// <remarks>
 	/// A token that cannot be parsed as a glob, such as the half-typed range <c>file[0-</c>, is ignored
-	/// rather than throwing: as a plain or required token it matches everything, and as an excluded
+	/// rather than throwing: as a plain token it is left out of the optional tokens, so it neither
+	/// matches nor rejects anything; as a required token it matches everything; and as an excluded
 	/// token it excludes nothing.
 	/// </remarks>
 	public static bool DoesMatchGlob(string text, string filter, TextFilterMatchOptions textFilterMatchOptions, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
@@ -357,9 +358,14 @@ public static partial class TextFilter
 			? Enumerable.All
 			: Enumerable.Any;
 
-		bool anyOptionalMatches = optionalMatchFunc(optionalTokens, filterToken => AnyTokenMatchesGlobFilter(filterToken, textTokens, caseSensitivity));
+		// An unparseable optional token is dropped before Any/All is applied. Left in, it would count
+		// as a match, which under Any lets every item through while the user is still typing a second
+		// token ("*.cs file[0-"). With none left, no optional constraint applies, as for one bad token.
+		List<string> parseableOptionalTokens = [.. optionalTokens.Where(filterToken => ResolveGlob(filterToken, caseSensitivity) is not null)];
 
-		if (optionalTokens.Count != 0 && !anyOptionalMatches)
+		bool anyOptionalMatches = optionalMatchFunc(parseableOptionalTokens, filterToken => AnyTokenMatchesGlobFilter(filterToken, textTokens, caseSensitivity));
+
+		if (parseableOptionalTokens.Count != 0 && !anyOptionalMatches)
 		{
 			return false; // optional tokens were set but text does not contain any optional tokens
 		}

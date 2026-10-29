@@ -1,4 +1,4 @@
-// Copyright (c) 2023-2026 ktsu-dev contributors
+﻿// Copyright (c) 2023-2026 ktsu-dev contributors
 
 namespace TextFilter.Test;
 
@@ -1166,5 +1166,33 @@ public class TextFilterTests
 		List<string> result = [.. TextFilter.Filter(strings, paddedFilter, TextFilterType.Fuzzy)];
 		CollectionAssert.AreEquivalent(HelMatches, result,
 			$"Padding in '{paddedFilter}' should not hide items that 'hel' matches.");
+	}
+
+	[TestMethod]
+	[DataRow(TextFilterMatchOptions.ByWordAny)]
+	[DataRow(TextFilterMatchOptions.ByWordAll)]
+	public void HalfTypedSecondOptionalGlobTokenDoesNotMatchEverything(TextFilterMatchOptions matchOptions)
+	{
+		Assert.IsFalse(TextFilter.IsMatch("readme.md", "*.cs file[0-", TextFilterType.Glob, matchOptions));
+		Assert.IsTrue(TextFilter.IsMatch("main.cs", "*.cs file[0-", TextFilterType.Glob, matchOptions));
+	}
+
+	[TestMethod]
+	public void FilterWhileTypingASecondGlobTokenNeverFlashesEveryItem()
+	{
+		List<string> items = ["main.cs", "readme.md", "file1.txt", "logo.png"];
+		string[] keystrokes = ["*.cs", "*.cs file[", "*.cs file[0", "*.cs file[0-", "*.cs file[0-9"];
+		foreach (string filter in keystrokes)
+		{
+			CollectionAssert.AreEqual(new List<string> { "main.cs" }, TextFilter.Filter(items, filter).ToList(), $"Filter '{filter}'");
+		}
+	}
+
+	[TestMethod]
+	public void OnlyUnparseableOptionalGlobTokenStillMatchesEverything()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("readme.md", "file[0-", TextFilterType.Glob));
+		Assert.IsTrue(TextFilter.IsMatch("readme.md", "file[0- +readme*", TextFilterType.Glob));
+		Assert.IsFalse(TextFilter.IsMatch("readme.md", "file[0- -readme*", TextFilterType.Glob));
 	}
 }
