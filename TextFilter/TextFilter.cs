@@ -329,6 +329,10 @@ public static partial class TextFilter
 	/// A token that cannot be parsed as a glob, such as the half-typed range <c>file[0-</c>, is ignored
 	/// rather than throwing: as a plain or required token it matches everything, and as an excluded
 	/// token it excludes nothing.
+	/// <para>
+	/// Any other <c>[</c> with no closing <c>]</c> is a literal bracket, so <c>a[b</c> matches the text
+	/// <c>a[b</c> and not <c>ab</c>, the same as the escaped form <c>a[[]b</c>.
+	/// </para>
 	/// </remarks>
 	public static bool DoesMatchGlob(string text, string filter, TextFilterMatchOptions textFilterMatchOptions, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
 	{
@@ -489,15 +493,19 @@ public static partial class TextFilter
 	// explicit character list it means, which it does read correctly, negation and case folding
 	// included: "[0-9a-f]" becomes "[0123456789abcdef]" and "[a-z-]" becomes "[-abc...z]". A lone
 	// letter or digit range is left for DotNet.Glob to match natively, since it reads that form
-	// correctly and it may span far more characters than are worth listing. A class with no closing
-	// "]" is left alone and stays unparseable.
+	// correctly and it may span far more characters than are worth listing.
+	// A "[" with no closing "]" is a literal, as fnmatch and bash treat it, so it is written as "[[]".
+	// DotNet.Glob would otherwise read it as a class running to the end of the token, and "a[b" would
+	// match "ab" but not "a[b". The exception is a class left open after a dash ("file[0-"), a range
+	// still being typed: it is left alone and stays unparseable, so it is ignored as documented on
+	// DoesMatchGlob.
 	// Returns null for a class that cannot be written as a list: one whose ranges span more than
 	// MaxGlobClassMembers characters, or that has no members at all because every range is reversed.
 	private const int MaxGlobClassMembers = 4096;
 
 	internal static string? ExpandGlobClasses(string token)
 	{
-		if (!token.Contains(']'))
+		if (!token.Contains('['))
 		{
 			return token;
 		}
@@ -515,7 +523,14 @@ public static partial class TextFilter
 			int close = FindGlobClassEnd(token, open, out bool negated, out int contentStart);
 			if (close < 0)
 			{
-				break;
+				if (token.EndsWith('-'))
+				{
+					break;
+				}
+
+				result.Append(token, index, open - index).Append("[[]");
+				index = open + 1;
+				continue;
 			}
 
 			string content = token[contentStart..close];
