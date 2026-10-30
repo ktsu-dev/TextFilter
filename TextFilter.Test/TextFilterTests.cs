@@ -1196,6 +1196,7 @@ public class TextFilterTests
 		Assert.IsFalse(TextFilter.IsMatch("readme.md", "file[0- -readme*", TextFilterType.Glob));
 	}
 
+	[TestMethod]
 	[DataRow(TextFilterType.Glob, "*.cs")]
 	[DataRow(TextFilterType.Regex, "\\.cs$")]
 	public void FilterTakeStopsReadingOnceEnoughGlobOrRegexItemsMatch(TextFilterType filterType, string filter)
