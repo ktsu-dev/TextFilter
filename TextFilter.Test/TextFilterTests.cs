@@ -979,12 +979,12 @@ public class TextFilterTests
 	[DataRow("[!0-9]", "[!0-9]")]
 	[DataRow("[abc]", "[abc]")]
 	[DataRow("[!-#]", "[!-#]")]
+	[DataRow("[!A-z]", "[!]ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz]")]
+	[DataRow("[A-Z]", "[A-Z]")]
 	[DataRow("[ !-#]", "[ \"#!]")]
 	[DataRow("file[0-", "file[0-")]
 	[DataRow("a]b", "a]b")]
 	[DataRow("[a-]x[0-", "[-a]x[0-")]
-	[DataRow("[!A-z]", "[!]ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz]")]
-	[DataRow("[A-Z]", "[A-Z]")]
 	public void ExpandGlobClassesRewritesOnlyClassesDotNetGlobMisreads(string token, string expected) =>
 		Assert.AreEqual(expected, TextFilter.ExpandGlobClasses(token));
 
@@ -1027,6 +1027,19 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	public void GlobClassWithBothLetterCasesMatchesEachCase()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("Q", "[a-zA-Z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+		Assert.IsTrue(TextFilter.IsMatch("q", "[a-zA-Z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+		Assert.IsFalse(TextFilter.IsMatch("_", "[a-zA-Z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+
+		// Case folding still applies to the expanded list, in both directions.
+		Assert.IsTrue(TextFilter.IsMatch("C", "[0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+		Assert.IsFalse(TextFilter.IsMatch("C", "[0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+		Assert.IsFalse(TextFilter.IsMatch("C", "[!0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+	}
+
+	[TestMethod]
 	[DataRow("[.-0]", "/ . 0", "a -")]
 	[DataRow("[!.-0]", "a -", "/ . 0")]
 	[DataRow("[A-z]", "\\ A _ z", "0 {")]
@@ -1049,19 +1062,6 @@ public class TextFilterTests
 		{
 			Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString), $"{pattern} should not match {text}");
 		}
-	}
-
-	[TestMethod]
-	public void GlobClassWithBothLetterCasesMatchesEachCase()
-	{
-		Assert.IsTrue(TextFilter.IsMatch("Q", "[a-zA-Z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
-		Assert.IsTrue(TextFilter.IsMatch("q", "[a-zA-Z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
-		Assert.IsFalse(TextFilter.IsMatch("_", "[a-zA-Z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
-
-		// Case folding still applies to the expanded list, in both directions.
-		Assert.IsTrue(TextFilter.IsMatch("C", "[0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
-		Assert.IsFalse(TextFilter.IsMatch("C", "[0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
-		Assert.IsFalse(TextFilter.IsMatch("C", "[!0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
 	}
 
 	[TestMethod]
