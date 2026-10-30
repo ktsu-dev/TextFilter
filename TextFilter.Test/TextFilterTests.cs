@@ -1317,4 +1317,57 @@ public class TextFilterTests
 		CollectionAssert.AreEqual(scores.OrderByDescending(s => s).ToList(), scores);
 		Assert.IsNotEmpty(result);
 	}
+
+	// Assemblies compiled against 1.6 or earlier bind to these exact signatures, so each must still
+	// exist in the binary even though source callers now resolve to the case-sensitivity overloads.
+	[TestMethod]
+	[DataRow(nameof(TextFilter.Filter), new[] { typeof(IEnumerable<string>), typeof(string), typeof(TextFilterType), typeof(TextFilterMatchOptions) })]
+	[DataRow(nameof(TextFilter.IsMatch), new[] { typeof(string), typeof(string), typeof(TextFilterType), typeof(TextFilterMatchOptions) })]
+	[DataRow(nameof(TextFilter.DoesMatchGlob), new[] { typeof(string), typeof(string), typeof(TextFilterMatchOptions) })]
+	[DataRow(nameof(TextFilter.DoesMatchRegex), new[] { typeof(string), typeof(string), typeof(TextFilterMatchOptions) })]
+	[DataRow(nameof(TextFilter.AnyTokenMatchesGlobFilter), new[] { typeof(string), typeof(HashSet<string>) })]
+	[DataRow(nameof(TextFilter.AllTokensMatchGlobFilter), new[] { typeof(string), typeof(HashSet<string>) })]
+	public void Pre17SignatureStillExists(string methodName, Type[] parameterTypes)
+	{
+		Assert.IsNotNull(typeof(TextFilter).GetMethod(methodName, parameterTypes), $"{methodName}({string.Join(", ", parameterTypes.Select(t => t.Name))}) is missing");
+	}
+
+	[TestMethod]
+	public void Pre17IsMatchWithScoreSignatureStillExists()
+	{
+		Type[] parameterTypes = [typeof(string), typeof(string), typeof(int).MakeByRefType(), typeof(TextFilterType), typeof(TextFilterMatchOptions)];
+		Assert.IsNotNull(typeof(TextFilter).GetMethod(nameof(TextFilter.IsMatch), parameterTypes));
+	}
+
+	[TestMethod]
+	public void Pre17GenericFilterSignatureStillExists()
+	{
+		Assert.IsTrue(typeof(TextFilter).GetMethods().Any(m =>
+			m.Name == nameof(TextFilter.Filter)
+			&& m.IsGenericMethodDefinition
+			&& m.GetParameters().Length == 5
+			&& m.GetParameters()[4].ParameterType == typeof(TextFilterMatchOptions)));
+	}
+
+	[TestMethod]
+	public void Pre17SignaturesMatchCaseSensitively()
+	{
+		object?[] args = ["Hello World", "hello", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny];
+		Type[] parameterTypes = [typeof(string), typeof(string), typeof(TextFilterType), typeof(TextFilterMatchOptions)];
+		System.Reflection.MethodInfo? isMatch = typeof(TextFilter).GetMethod(nameof(TextFilter.IsMatch), parameterTypes);
+		Assert.IsNotNull(isMatch);
+		Assert.IsFalse((bool)isMatch.Invoke(null, args)!);
+		Assert.IsTrue((bool)isMatch.Invoke(null, ["Hello World", "Hello", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny])!);
+	}
+
+	[TestMethod]
+	public void SourceCallsWithAllPre17ArgumentsStillCompileAndMatchCaseSensitively()
+	{
+		Assert.IsFalse(TextFilter.IsMatch("Hello World", "hello", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny));
+		Assert.IsTrue(TextFilter.IsMatch("Hello World", "hello", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity.CaseInsensitive));
+		Assert.IsTrue(TextFilter.AnyTokenMatchesGlobFilter("Hel*", ["Hello"]));
+		Assert.IsTrue(TextFilter.AllTokensMatchGlobFilter("hel*", ["Hello"], TextFilterCaseSensitivity.CaseInsensitive));
+		Assert.HasCount(1, TextFilter.Filter(["Hello", "hello"], "Hello", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString).ToList());
+		Assert.HasCount(1, TextFilter.Filter([(1, "Hello"), (2, "hello")], t => t.Item2, "Hello", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString).ToList());
+	}
 }
