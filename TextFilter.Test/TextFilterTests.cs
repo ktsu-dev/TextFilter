@@ -983,6 +983,8 @@ public class TextFilterTests
 	[DataRow("file[0-", "file[0-")]
 	[DataRow("a]b", "a]b")]
 	[DataRow("[a-]x[0-", "[-a]x[0-")]
+	[DataRow("[!A-z]", "[!]ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz]")]
+	[DataRow("[A-Z]", "[A-Z]")]
 	public void ExpandGlobClassesRewritesOnlyClassesDotNetGlobMisreads(string token, string expected) =>
 		Assert.AreEqual(expected, TextFilter.ExpandGlobClasses(token));
 
@@ -1021,6 +1023,31 @@ public class TextFilterTests
 			{
 				Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity), $"{pattern} should not match {text} ({caseSensitivity})");
 			}
+		}
+	}
+
+	[TestMethod]
+	[DataRow("[.-0]", "/ . 0", "a -")]
+	[DataRow("[!.-0]", "a -", "/ . 0")]
+	[DataRow("[A-z]", "\\ A _ z", "0 {")]
+	[DataRow("[!A-z]", "0 {", "\\ A _ z")]
+	[DataRow("[*-0]", "/ \\ * 0", "a")]
+	[DataRow("[a-z]", "a q z", "/ \\ A")]
+	public void GlobClassRangeSpanningAPathSeparatorMatchesIt(string pattern, string matching, string notMatching)
+	{
+		// Path separators are masked to a private-use character in the pattern and the text, so a range
+		// left for DotNet.Glob to match natively never contained a masked "/" or "\" (#157). The two
+		// separators share one mask (#132), so these rows don't try to tell "/" and "\" apart.
+		ArgumentNullException.ThrowIfNull(matching);
+		ArgumentNullException.ThrowIfNull(notMatching);
+		foreach (string text in matching.Split(' '))
+		{
+			Assert.IsTrue(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString), $"{pattern} should match {text}");
+		}
+
+		foreach (string text in notMatching.Split(' '))
+		{
+			Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString), $"{pattern} should not match {text}");
 		}
 	}
 

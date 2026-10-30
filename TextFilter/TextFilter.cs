@@ -548,9 +548,15 @@ public static partial class TextFilter
 		return contentStart < token.Length ? token.IndexOf(']', contentStart + 1) : -1;
 	}
 
+	// A range that spans "/" or "\" is listed instead, so the separator in it is masked like any other
+	// literal one; left native, it would never contain the masked separator in the text ("[A-z]").
 	private static bool IsNativeGlobRange(string content) =>
 		content.Length == 3 && content[1] == '-' && content[0] != ']'
-		&& ((char.IsLetter(content[0]) && char.IsLetter(content[2])) || (char.IsAsciiDigit(content[0]) && char.IsAsciiDigit(content[2])));
+		&& ((char.IsLetter(content[0]) && char.IsLetter(content[2])) || (char.IsAsciiDigit(content[0]) && char.IsAsciiDigit(content[2])))
+		&& !SpansPathSeparator(content[0], content[2]);
+
+	private static bool SpansPathSeparator(char first, char last) =>
+		(first <= '/' && '/' <= last) || (first <= '\\' && '\\' <= last);
 
 	// Reads the class members with the usual glob rules (a leading "]" and a leading or trailing "-" are
 	// literal, "x-y" is an inclusive range) and writes them in an order DotNet.Glob reads as a plain list:
