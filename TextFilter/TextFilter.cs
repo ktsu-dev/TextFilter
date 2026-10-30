@@ -519,8 +519,9 @@ public static partial class TextFilter
 			}
 
 			string content = token[contentStart..close];
+			string opening = negated ? "[!" : "[";
 			string? rewritten = !content.Contains('-') || IsNativeGlobRange(content)
-				? (negated ? "[!" : "[") + content + "]"
+				? opening + content + "]"
 				: ToGlobCharacterList(content, negated);
 			if (rewritten is null)
 			{
