@@ -519,11 +519,7 @@ public static partial class TextFilter
 			}
 
 			string content = token[contentStart..close];
-			string? rewritten = !content.Contains('-') || IsNativeGlobRange(content)
-				? token[open..(close + 1)]
-				: IsReversedLetterRange(content)
-					? negated ? "[!9-0]" : "[9-0]"
-					: ToGlobCharacterList(content, negated);
+			string? rewritten = RewriteGlobClass(token[open..(close + 1)], content, negated);
 			if (rewritten is null)
 			{
 				return null;
@@ -534,6 +530,22 @@ public static partial class TextFilter
 		}
 
 		return result.Append(token, index, token.Length - index).ToString();
+	}
+
+	// Returns the class as DotNet.Glob should see it, or null if it cannot be listed.
+	private static string? RewriteGlobClass(string globClass, string content, bool negated)
+	{
+		if (!content.Contains('-') || IsNativeGlobRange(content))
+		{
+			return globClass;
+		}
+
+		if (IsReversedLetterRange(content))
+		{
+			return negated ? "[!9-0]" : "[9-0]";
+		}
+
+		return ToGlobCharacterList(content, negated);
 	}
 
 	// Returns the index of the "]" closing the class opened at "open", or -1 if it is never closed.

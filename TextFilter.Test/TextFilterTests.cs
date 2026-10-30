@@ -971,17 +971,13 @@ public class TextFilterTests
 	[TestMethod]
 	public void CaseInsensitiveGlobClassMatchesEverythingCaseSensitiveDoes()
 	{
-		string[] patterns = ["[A-z]", "[Z-a]", "[a-Z]", "[a-z]", "[A-Z]", "[0-9]", "[!A-z]", "[!Z-a]", "[!a-z]", "[!A-Z]"];
+		string[] patterns = ["[A-z]", "[Z-a]", "[a-Z]", "[a-z]", "[A-Z]", "[0-9]"];
 		for (char c = ' '; c <= '~'; c++)
 		{
 			string text = c.ToString();
-			foreach (string pattern in patterns)
+			foreach (string pattern in patterns.Where(p => TextFilter.IsMatch(text, p, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive)))
 			{
-				if (TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive)
-					&& !pattern.StartsWith("[!", StringComparison.Ordinal))
-				{
-					Assert.IsTrue(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive), $"{pattern} on '{text}'");
-				}
+				Assert.IsTrue(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive), $"{pattern} on '{text}'");
 			}
 		}
 	}
