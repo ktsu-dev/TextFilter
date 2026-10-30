@@ -965,6 +965,31 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	public void GlobWithAnUnclosedBracketMatchesTheBracketLiterally()
+	{
+		// A "[" with no closing "]" is a literal, as in fnmatch and bash. DotNet.Glob read it as a class
+		// running to the end of the token, so "a[b" matched "ab" but not "a[b", and "-log[1" hid "log1".
+		List<string> items = ["log[", "log[1", "log1", "logb", "a[b", "ab", "readme.md"];
+		foreach (TextFilterCaseSensitivity caseSensitivity in new[] { TextFilterCaseSensitivity.CaseSensitive, TextFilterCaseSensitivity.CaseInsensitive })
+		{
+			Assert.IsTrue(TextFilter.IsMatch("a[b", "a[b", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity));
+			Assert.IsFalse(TextFilter.IsMatch("ab", "a[b", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity));
+			CollectionAssert.AreEqual(
+				new List<string> { "log[" },
+				TextFilter.Filter(items, "log[", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity).ToList());
+			CollectionAssert.AreEqual(
+				new List<string> { "log[1" },
+				TextFilter.Filter(items, "log[1", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity).ToList());
+			CollectionAssert.AreEqual(
+				new List<string> { "log[", "log1", "logb", "a[b", "ab", "readme.md" },
+				TextFilter.Filter(items, "-log[1", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity).ToList());
+			CollectionAssert.AreEqual(
+				new List<string> { "a[b" },
+				TextFilter.Filter(items, "a[[]b", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity).ToList());
+		}
+	}
+
+	[TestMethod]
 	[DataRow("file[a-]", "file[-a]")]
 	[DataRow("file[!a-]", "file[!-a]")]
 	[DataRow("[0-9a-]x[b-]", "[-0123456789a]x[-b]")]
@@ -983,6 +1008,11 @@ public class TextFilterTests
 	[DataRow("file[0-", "file[0-")]
 	[DataRow("a]b", "a]b")]
 	[DataRow("[a-]x[0-", "[-a]x[0-")]
+	[DataRow("a[b", "a[[]b")]
+	[DataRow("log[", "log[[]")]
+	[DataRow("a[b[c", "a[[]b[[]c")]
+	[DataRow("[ab]x[c", "[ab]x[[]c")]
+	[DataRow("a[[]b", "a[[]b")]
 	public void ExpandGlobClassesRewritesOnlyClassesDotNetGlobMisreads(string token, string expected) =>
 		Assert.AreEqual(expected, TextFilter.ExpandGlobClasses(token));
 
