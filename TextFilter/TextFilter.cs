@@ -181,14 +181,22 @@ public static partial class TextFilter
 		Ensure.NotNull(keySelector);
 		Ensure.NotNull(filter);
 
-		return items.Select(item =>
+		IEnumerable<(TItem item, bool isMatch, int score)> matches = items.Select(item =>
 		{
 			bool isMatch = IsMatch(keySelector(item), filter, out int score, filterType, textFilterMatchOptions, caseSensitivity);
 			return (item, isMatch, score);
 		})
-		.Where(t => t.isMatch)
-		.OrderByDescending(t => t.score)
-		.Select(t => t.item);
+		.Where(t => t.isMatch);
+
+		// Only a non-blank fuzzy filter sets a score, so sorting anything else would reorder nothing
+		// while still reading the whole source before yielding the first item. Skipping it lets glob
+		// and regex results stream, so Take(n) or First() stops as soon as it has enough matches.
+		if (filterType is TextFilterType.Fuzzy && !string.IsNullOrWhiteSpace(filter))
+		{
+			matches = matches.OrderByDescending(t => t.score);
+		}
+
+		return matches.Select(t => t.item);
 	}
 
 	/// <summary>
