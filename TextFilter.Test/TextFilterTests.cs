@@ -940,6 +940,53 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("[A-z]", "_", true)]
+	[DataRow("[A-z]", "[", true)]
+	[DataRow("[A-z]", "m", true)]
+	[DataRow("[Z-a]", "a", true)]
+	[DataRow("[Z-a]", "_", true)]
+	[DataRow("[Z-a]", "b", false)]
+	[DataRow("[!A-z]", "_", false)]
+	[DataRow("[!A-z]", "{", true)]
+	[DataRow("[a-Z]", "z", false)]
+	[DataRow("[!a-Z]", "z", true)]
+	public void GlobRangeWithMixedCaseEndpointsMatchesTheSameUnderBothSensitivities(string pattern, string text, bool expected)
+	{
+		// Under CaseInsensitive, DotNet.Glob lowercases a range's endpoints, so "A-z" became "a-z" and
+		// lost "_" and "[", "Z-a" became the empty "z-a", and the reversed "a-Z" became "a-z".
+		foreach (TextFilterCaseSensitivity caseSensitivity in new[] { TextFilterCaseSensitivity.CaseSensitive, TextFilterCaseSensitivity.CaseInsensitive })
+		{
+			Assert.AreEqual(expected, TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity), caseSensitivity.ToString());
+		}
+	}
+
+	[TestMethod]
+	public void GlobRangeWithSameCaseEndpointsStillFoldsUnderCaseInsensitive()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("M", "[a-z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+		Assert.IsFalse(TextFilter.IsMatch("M", "[a-z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
+		Assert.IsTrue(TextFilter.IsMatch("m", "[A-Z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+	}
+
+	[TestMethod]
+	public void CaseInsensitiveGlobClassMatchesEverythingCaseSensitiveDoes()
+	{
+		string[] patterns = ["[A-z]", "[Z-a]", "[a-Z]", "[a-z]", "[A-Z]", "[0-9]", "[!A-z]", "[!Z-a]", "[!a-z]", "[!A-Z]"];
+		for (char c = ' '; c <= '~'; c++)
+		{
+			string text = c.ToString();
+			foreach (string pattern in patterns)
+			{
+				if (TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive)
+					&& !pattern.StartsWith("[!", StringComparison.Ordinal))
+				{
+					Assert.IsTrue(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive), $"{pattern} on '{text}'");
+				}
+			}
+		}
+	}
+
+	[TestMethod]
 	public void GlobClassWithATrailingDashMatchesTheDashLiterally()
 	{
 		// A "-" just before "]" is a literal dash, so "file[a-]" is a finished pattern matching "filea"

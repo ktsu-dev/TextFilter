@@ -521,7 +521,9 @@ public static partial class TextFilter
 			string content = token[contentStart..close];
 			string? rewritten = !content.Contains('-') || IsNativeGlobRange(content)
 				? token[open..(close + 1)]
-				: ToGlobCharacterList(content, negated);
+				: IsReversedLetterRange(content)
+					? negated ? "[!9-0]" : "[9-0]"
+					: ToGlobCharacterList(content, negated);
 			if (rewritten is null)
 			{
 				return null;
@@ -548,9 +550,19 @@ public static partial class TextFilter
 		return contentStart < token.Length ? token.IndexOf(']', contentStart + 1) : -1;
 	}
 
+	// A lone range is left for DotNet.Glob only when its endpoints share a case or are both digits. Under
+	// CaseInsensitive, DotNet.Glob lowercases the endpoints, which would turn the mixed-case "A-z" into
+	// "a-z" (losing "_" and "["), so a mixed-case range is listed by ToGlobCharacterList instead.
 	private static bool IsNativeGlobRange(string content) =>
 		content.Length == 3 && content[1] == '-' && content[0] != ']'
-		&& ((char.IsLetter(content[0]) && char.IsLetter(content[2])) || (char.IsAsciiDigit(content[0]) && char.IsAsciiDigit(content[2])));
+		&& ((char.IsLower(content[0]) && char.IsLower(content[2]))
+			|| (char.IsUpper(content[0]) && char.IsUpper(content[2]))
+			|| (char.IsAsciiDigit(content[0]) && char.IsAsciiDigit(content[2])));
+
+	// A lone reversed letter range, such as "a-Z", matches nothing, but DotNet.Glob would fold it to "a-z"
+	// under CaseInsensitive. It is written as a reversed digit range, which case folding leaves alone.
+	private static bool IsReversedLetterRange(string content) =>
+		content.Length == 3 && content[1] == '-' && char.IsLetter(content[0]) && char.IsLetter(content[2]) && content[0] > content[2];
 
 	// Reads the class members with the usual glob rules (a leading "]" and a leading or trailing "-" are
 	// literal, "x-y" is an inclusive range) and writes them in an order DotNet.Glob reads as a plain list:
