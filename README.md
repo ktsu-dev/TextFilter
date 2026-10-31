@@ -123,6 +123,13 @@ tokens as well as optional ones.
 
 `TextFilterType.Fuzzy` does not take the setting: fuzzy matching is always case insensitive.
 
+### Glob Character Classes
+
+A glob token can contain a bracket class that matches one character: `[abc]`, a range such as
+`[0-9]`, or a mix such as `[0-9a-f]`. A class that opens with `!` or `^` is negated, so `x[!a]` and
+`x[^a]` both match `xb` but not `xa`. A `^` anywhere else in a class is an ordinary member: `x[a^]`
+matches `x^`.
+
 Case is folded invariantly, so the answer does not depend on the calling thread's `CurrentCulture`.
 That matters for the dotted and dotless I: under a Turkish culture, `i` and `I` are not each other's
 case pair, and a culture-sensitive fold would stop a filter of `img` matching `IMG_1234.JPG` on a

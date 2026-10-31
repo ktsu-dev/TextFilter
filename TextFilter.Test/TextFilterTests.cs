@@ -985,6 +985,13 @@ public class TextFilterTests
 	[DataRow("file[0-", "file[0-")]
 	[DataRow("a]b", "a]b")]
 	[DataRow("[a-]x[0-", "[-a]x[0-")]
+	[DataRow("x[^a]", "x[!a]")]
+	[DataRow("[^a-]", "[!-a]")]
+	[DataRow("[^0-9]", "[!0-9]")]
+	[DataRow("[^0-9a-f]", "[!0123456789abcdef]")]
+	[DataRow("[^]a]", "[!]a]")]
+	[DataRow("x[a^]", "x[a^]")]
+	[DataRow("x[^a", "x[^a")]
 	public void ExpandGlobClassesRewritesOnlyClassesDotNetGlobMisreads(string token, string expected) =>
 		Assert.AreEqual(expected, TextFilter.ExpandGlobClasses(token));
 
@@ -1024,6 +1031,34 @@ public class TextFilterTests
 				Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity), $"{pattern} should not match {text} ({caseSensitivity})");
 			}
 		}
+	}
+
+	[TestMethod]
+	[DataRow("x[^a]", "xb xc x! x^", "xa")]
+	[DataRow("x[!a]", "xb xc x^", "xa")]
+	[DataRow("x[^a-]", "xb x^", "xa x-")]
+	[DataRow("x[^0-9a-f]", "xg x_", "x0 x5 xc")]
+	[DataRow("x[a^]", "xa x^", "xb")]
+	public void GlobClassOpeningWithCaretIsNegated(string pattern, string matching, string notMatching)
+	{
+		// DotNet.Glob only reads "!" as negation, so "[^a]" used to be the positive class {^, a} and
+		// returned exactly the items the user meant to exclude (#158).
+		ArgumentNullException.ThrowIfNull(matching);
+		ArgumentNullException.ThrowIfNull(notMatching);
+		foreach (TextFilterCaseSensitivity caseSensitivity in new[] { TextFilterCaseSensitivity.CaseSensitive, TextFilterCaseSensitivity.CaseInsensitive })
+		{
+			foreach (string text in matching.Split(' '))
+			{
+				Assert.IsTrue(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity), $"{pattern} should match {text} ({caseSensitivity})");
+			}
+
+			foreach (string text in notMatching.Split(' '))
+			{
+				Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity), $"{pattern} should not match {text} ({caseSensitivity})");
+			}
+		}
+
+		Assert.IsFalse(TextFilter.IsMatch("XA", "x[^a]", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity.CaseInsensitive));
 	}
 
 	[TestMethod]

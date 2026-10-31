@@ -525,8 +525,9 @@ public static partial class TextFilter
 			}
 
 			string content = token[contentStart..close];
+			string opening = negated ? "[!" : "[";
 			string? rewritten = !content.Contains('-') || IsNativeGlobRange(content)
-				? token[open..(close + 1)]
+				? opening + content + "]"
 				: ToGlobCharacterList(content, negated);
 			if (rewritten is null)
 			{
@@ -541,10 +542,12 @@ public static partial class TextFilter
 	}
 
 	// Returns the index of the "]" closing the class opened at "open", or -1 if it is never closed.
+	// A class opening with "^" is negated, as in bash, gitignore and regex, the same as one opening with
+	// "!". DotNet.Glob only knows "!", so the caller writes the negation back out as "!".
 	private static int FindGlobClassEnd(string token, int open, out bool negated, out int contentStart)
 	{
 		contentStart = open + 1;
-		negated = contentStart < token.Length && token[contentStart] == '!';
+		negated = contentStart < token.Length && token[contentStart] is '!' or '^';
 		if (negated)
 		{
 			contentStart++;
