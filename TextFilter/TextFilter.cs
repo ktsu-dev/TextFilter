@@ -347,10 +347,10 @@ public static partial class TextFilter
 		// The filter is split on whitespace, so under ByWholeString no single token can equal a text that
 		// contains a space ("my file.txt"). With only plain tokens, try the whole filter as one glob first;
 		// the per-token pass below still runs, so "*.jpg *.png" keeps matching "a.png" (#113).
+		string wholeFilter = filter.Trim();
 		if (textFilterMatchOptions is TextFilterMatchOptions.ByWholeString
 			&& filterTokens.Count == 1
 			&& filterTokens.ContainsKey(TextFilterTokenType.Optional)
-			&& filter.Trim() is string wholeFilter
 			&& wholeFilter.Any(char.IsWhiteSpace)
 			&& ResolveGlob(wholeFilter, caseSensitivity) is Glob[] wholeFilterGlobs
 			&& IsGlobMatch(wholeFilterGlobs, text))
