@@ -1372,4 +1372,37 @@ public class TextFilterTests
 		CollectionAssert.AreEqual(scores.OrderByDescending(s => s).ToList(), scores);
 		Assert.IsNotEmpty(result);
 	}
+
+	[TestMethod]
+	[DataRow("foo bar", "foo bar")]
+	[DataRow("my file.txt", "my file.txt")]
+	[DataRow("my file.txt", "  my file.txt  ")]
+	[DataRow("my file.txt", "my *.txt")]
+	public void GlobByWholeStringMatchesTextContainingASpace(string text, string filter)
+	{
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	public void GlobByWholeStringWithASpaceStillNeedsTheWholeTextToMatch()
+	{
+		Assert.IsFalse(TextFilter.IsMatch("foo bar baz", "foo bar", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsFalse(TextFilter.IsMatch("foo  bar", "foo bar", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsFalse(TextFilter.IsMatch("Foo bar", "foo bar", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsTrue(TextFilter.IsMatch("Foo Bar", "foo bar", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+	}
+
+	[TestMethod]
+	public void GlobByWholeStringKeepsMultiplePatternsAndPrefixedTokens()
+	{
+		// #113: each pattern is still tried on its own.
+		Assert.IsTrue(TextFilter.IsMatch("a.png", "*.jpg *.png", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsFalse(TextFilter.IsMatch("a.gif", "*.jpg *.png", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+
+		// A filter with an excluded or required token is not tried whole, so those tokens behave as before.
+		Assert.IsFalse(TextFilter.IsMatch("a.png", "*.png -a.*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsTrue(TextFilter.IsMatch("b.png", "*.png -a.*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsTrue(TextFilter.IsMatch("a.png", "*.png +a.*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsFalse(TextFilter.IsMatch("b.png", "*.png +a.*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
 }
