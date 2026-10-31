@@ -1040,17 +1040,17 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
-	[DataRow("[.-0]", "/ . 0", "a -")]
-	[DataRow("[!.-0]", "a -", "/ . 0")]
-	[DataRow("[A-z]", "\\ A _ z", "0 {")]
-	[DataRow("[!A-z]", "0 {", "\\ A _ z")]
-	[DataRow("[*-0]", "/ \\ * 0", "a")]
+	[DataRow("[.-0]", "/ . 0", "a - \\")]
+	[DataRow("[!.-0]", "a - \\", "/ . 0")]
+	[DataRow("[A-z]", "\\ A _ z", "0 { /")]
+	[DataRow("[!A-z]", "0 { /", "\\ A _ z")]
+	[DataRow("[*-0]", "/ * 0", "a \\")]
 	[DataRow("[a-z]", "a q z", "/ \\ A")]
 	public void GlobClassRangeSpanningAPathSeparatorMatchesIt(string pattern, string matching, string notMatching)
 	{
 		// Path separators are masked to a private-use character in the pattern and the text, so a range
-		// left for DotNet.Glob to match natively never contained a masked "/" or "\" (#157). The two
-		// separators share one mask (#132), so these rows don't try to tell "/" and "\" apart.
+		// left for DotNet.Glob to match natively never contained a masked "/" or "\" (#157). Each
+		// separator has its own mask (#132), so a range holding one of them doesn't match the other.
 		ArgumentNullException.ThrowIfNull(matching);
 		ArgumentNullException.ThrowIfNull(notMatching);
 		foreach (string text in matching.Split(' '))
@@ -1188,6 +1188,39 @@ public class TextFilterTests
 	public void GlobStarSlashMatchesCaseInsensitively()
 	{
 		Assert.IsTrue(TextFilter.IsMatch("Docs/README.md", "**/readme.md", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+	}
+
+	[TestMethod]
+	[DataRow(TextFilterCaseSensitivity.CaseSensitive)]
+	[DataRow(TextFilterCaseSensitivity.CaseInsensitive)]
+	public void GlobTellsSlashAndBackslashApart(TextFilterCaseSensitivity caseSensitivity)
+	{
+		// Both separators used to be masked to the same character, so either one matched the other (#132).
+		CollectionAssert.AreEqual(
+			new List<string> { "1/2" },
+			TextFilter.Filter(["C:\\temp\\x", "1/2", "1\\2"], "1/2", TextFilterType.Glob, caseSensitivity: caseSensitivity).ToList());
+		CollectionAssert.AreEqual(
+			new List<string> { "1\\2" },
+			TextFilter.Filter(["1/2", "1\\2"], "1\\2", TextFilterType.Glob, caseSensitivity: caseSensitivity).ToList());
+		Assert.IsFalse(TextFilter.IsMatch("a\\b", "a/b", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity));
+		Assert.IsFalse(TextFilter.IsMatch("a/b", "a\\b", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity));
+
+		// Excluding URLs keeps Windows paths.
+		CollectionAssert.AreEqual(
+			new List<string> { "C:\\temp", "plain" },
+			TextFilter.Filter(["C:\\temp", "http://x", "plain"], "-*/*", TextFilterType.Glob, caseSensitivity: caseSensitivity).ToList());
+
+		// Wildcards still cross either separator (#114).
+		Assert.IsTrue(TextFilter.IsMatch("a/b\\c", "a*c", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity));
+		Assert.IsTrue(TextFilter.IsMatch("a\\b", "a?b", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity));
+	}
+
+	[TestMethod]
+	[DataRow(@"src\x\a.cs", @"src/**/*.cs")]
+	[DataRow(@"src/x/a.cs", @"src\**\*.cs")]
+	public void GlobStarSegmentEndsAtTheSeparatorThePatternWrote(string text, string filter)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
 	}
 
 	[TestMethod]
