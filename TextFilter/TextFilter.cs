@@ -449,7 +449,8 @@ public static partial class TextFilter
 	// Masking also hides the separators DotNet.Glob needs to recognise "**/" as "zero or more path
 	// segments", leaving "**" followed by a literal character. Since * already crosses the masked
 	// separator, each "**/" is expanded here instead: dropped, for the zero-segment case, or kept as
-	// "*/", for "anything ending at a separator". A token matches if any expansion does.
+	// "*/", for "anything ending at a separator". A token matches if any expansion does. Only a "**/"
+	// that starts the token or follows a separator is dropped, since one joined to a literal is a "*".
 	private const string MaskedGlobStarSegment = "**\uE000";
 
 	// Each "**/" doubles the expansions, so only this many are expanded both ways; any beyond it keep
@@ -471,10 +472,14 @@ public static partial class TextFilter
 
 			foreach (string prefix in expansions)
 			{
-				next.Add(prefix + literal + "*" + MaskedPathSeparator);
-				if (expandBothWays)
+				string before = prefix + literal;
+				next.Add(before + "*" + MaskedPathSeparator);
+
+				// Only a "**" that is a whole segment can match zero segments; joined to a literal, as
+				// in "foo**/bar", it is just "*", and dropping it would splice "foo" onto "bar".
+				if (expandBothWays && (before.Length == 0 || before[^1] == MaskedPathSeparator))
 				{
-					next.Add(prefix + literal);
+					next.Add(before);
 				}
 			}
 

@@ -1175,6 +1175,26 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("foobar", "foo**/bar")]
+	[DataRow("ab", "a**/b")]
+	[DataRow("buildout", "build**/out")]
+	public void GlobStarJoinedToLiteralRequiresSeparator(string text, string filter)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsFalse(TextFilter.IsMatch(text, filter));
+	}
+
+	[TestMethod]
+	[DataRow("foo/bar", "foo**/bar")]
+	[DataRow("fooX/bar", "foo**/bar")]
+	[DataRow("bar", "**/bar")]
+	[DataRow("a/b", "a/**/b")]
+	public void GlobStarJoinedToLiteralStillMatchesWithSeparator(string text, string filter)
+	{
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
 	public void GlobStarSlashFiltersPathItems()
 	{
 		List<string> result = [.. TextFilter.Filter(["src/a.cs", "src/x/a.cs", "docs/readme.md"], "src/**/*.cs", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString)];
