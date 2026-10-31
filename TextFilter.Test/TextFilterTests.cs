@@ -1022,6 +1022,8 @@ public class TextFilterTests
 	[DataRow("[!0-9]", "[!0-9]")]
 	[DataRow("[abc]", "[abc]")]
 	[DataRow("[!-#]", "[!-#]")]
+	[DataRow("[!A-z]", "[!]ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz]")]
+	[DataRow("[A-Z]", "[A-Z]")]
 	[DataRow("[ !-#]", "[ \"#!]")]
 	[DataRow("file[0-", "file[0-")]
 	[DataRow("a]b", "a]b")]
@@ -1078,6 +1080,31 @@ public class TextFilterTests
 		Assert.IsTrue(TextFilter.IsMatch("C", "[0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
 		Assert.IsFalse(TextFilter.IsMatch("C", "[0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
 		Assert.IsFalse(TextFilter.IsMatch("C", "[!0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+	}
+
+	[TestMethod]
+	[DataRow("[.-0]", "/ . 0", "a -")]
+	[DataRow("[!.-0]", "a -", "/ . 0")]
+	[DataRow("[A-z]", "\\ A _ z", "0 {")]
+	[DataRow("[!A-z]", "0 {", "\\ A _ z")]
+	[DataRow("[*-0]", "/ \\ * 0", "a")]
+	[DataRow("[a-z]", "a q z", "/ \\ A")]
+	public void GlobClassRangeSpanningAPathSeparatorMatchesIt(string pattern, string matching, string notMatching)
+	{
+		// Path separators are masked to a private-use character in the pattern and the text, so a range
+		// left for DotNet.Glob to match natively never contained a masked "/" or "\" (#157). The two
+		// separators share one mask (#132), so these rows don't try to tell "/" and "\" apart.
+		ArgumentNullException.ThrowIfNull(matching);
+		ArgumentNullException.ThrowIfNull(notMatching);
+		foreach (string text in matching.Split(' '))
+		{
+			Assert.IsTrue(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString), $"{pattern} should match {text}");
+		}
+
+		foreach (string text in notMatching.Split(' '))
+		{
+			Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString), $"{pattern} should not match {text}");
+		}
 	}
 
 	[TestMethod]
@@ -1296,6 +1323,34 @@ public class TextFilterTests
 			Assert.AreEqual(TextFilter.IsMatch(text, "openfile", TextFilterType.Fuzzy), TextFilter.IsMatch(text, filter, TextFilterType.Fuzzy),
 				$"Whitespace in '{filter}' should not change whether '{text}' fuzzy-matches.");
 		}
+	}
+
+	[TestMethod]
+	[DataRow(TextFilterMatchOptions.ByWordAny)]
+	[DataRow(TextFilterMatchOptions.ByWordAll)]
+	public void HalfTypedSecondOptionalGlobTokenDoesNotMatchEverything(TextFilterMatchOptions matchOptions)
+	{
+		Assert.IsFalse(TextFilter.IsMatch("readme.md", "*.cs file[0-", TextFilterType.Glob, matchOptions));
+		Assert.IsTrue(TextFilter.IsMatch("main.cs", "*.cs file[0-", TextFilterType.Glob, matchOptions));
+	}
+
+	[TestMethod]
+	public void FilterWhileTypingASecondGlobTokenNeverFlashesEveryItem()
+	{
+		List<string> items = ["main.cs", "readme.md", "file1.txt", "logo.png"];
+		string[] keystrokes = ["*.cs", "*.cs file[", "*.cs file[0", "*.cs file[0-", "*.cs file[0-9"];
+		foreach (string filter in keystrokes)
+		{
+			CollectionAssert.AreEqual(new List<string> { "main.cs" }, TextFilter.Filter(items, filter).ToList(), $"Filter '{filter}'");
+		}
+	}
+
+	[TestMethod]
+	public void OnlyUnparseableOptionalGlobTokenStillMatchesEverything()
+	{
+		Assert.IsTrue(TextFilter.IsMatch("readme.md", "file[0-", TextFilterType.Glob));
+		Assert.IsTrue(TextFilter.IsMatch("readme.md", "file[0- +readme*", TextFilterType.Glob));
+		Assert.IsFalse(TextFilter.IsMatch("readme.md", "file[0- -readme*", TextFilterType.Glob));
 	}
 
 	[TestMethod]

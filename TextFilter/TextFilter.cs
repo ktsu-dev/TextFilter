@@ -327,7 +327,8 @@ public static partial class TextFilter
 	/// <returns><c>true</c> if the text matches the glob filter pattern; otherwise, <c>false</c>.</returns>
 	/// <remarks>
 	/// A token that cannot be parsed as a glob, such as the half-typed range <c>file[0-</c>, is ignored
-	/// rather than throwing: as a plain or required token it matches everything, and as an excluded
+	/// rather than throwing: as a plain token it is left out of the optional tokens, so it neither
+	/// matches nor rejects anything; as a required token it matches everything; and as an excluded
 	/// token it excludes nothing.
 	/// </remarks>
 	public static bool DoesMatchGlob(string text, string filter, TextFilterMatchOptions textFilterMatchOptions, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)
@@ -371,9 +372,14 @@ public static partial class TextFilter
 			? Enumerable.All
 			: Enumerable.Any;
 
-		bool anyOptionalMatches = optionalMatchFunc(optionalTokens, filterToken => AnyTokenMatchesGlobFilter(filterToken, textTokens, caseSensitivity));
+		// An unparseable optional token is dropped before Any/All is applied. Left in, it would count
+		// as a match, which under Any lets every item through while the user is still typing a second
+		// token ("*.cs file[0-"). With none left, no optional constraint applies, as for one bad token.
+		List<string> parseableOptionalTokens = [.. optionalTokens.Where(filterToken => ResolveGlob(filterToken, caseSensitivity) is not null)];
 
-		if (optionalTokens.Count != 0 && !anyOptionalMatches)
+		bool anyOptionalMatches = optionalMatchFunc(parseableOptionalTokens, filterToken => AnyTokenMatchesGlobFilter(filterToken, textTokens, caseSensitivity));
+
+		if (parseableOptionalTokens.Count != 0 && !anyOptionalMatches)
 		{
 			return false; // optional tokens were set but text does not contain any optional tokens
 		}
@@ -565,11 +571,17 @@ public static partial class TextFilter
 	// A lone range is left for DotNet.Glob only when its endpoints share a case or are both digits. Under
 	// CaseInsensitive, DotNet.Glob lowercases the endpoints, which would turn the mixed-case "A-z" into
 	// "a-z" (losing "_" and "["), so a mixed-case range is listed by ToGlobCharacterList instead.
+	// A range that spans "/" or "\" is listed too, so the separator in it is masked like any other
+	// literal one; left native, it would never contain the masked separator in the text.
 	private static bool IsNativeGlobRange(string content) =>
 		content.Length == 3 && content[1] == '-' && content[0] != ']'
 		&& ((char.IsLower(content[0]) && char.IsLower(content[2]))
 			|| (char.IsUpper(content[0]) && char.IsUpper(content[2]))
-			|| (char.IsAsciiDigit(content[0]) && char.IsAsciiDigit(content[2])));
+			|| (char.IsAsciiDigit(content[0]) && char.IsAsciiDigit(content[2])))
+		&& !SpansPathSeparator(content[0], content[2]);
+
+	private static bool SpansPathSeparator(char first, char last) =>
+		(first <= '/' && '/' <= last) || (first <= '\\' && '\\' <= last);
 
 	// A lone reversed letter range, such as "a-Z", matches nothing, but DotNet.Glob would fold it to "a-z"
 	// under CaseInsensitive. It is written as a reversed digit range, which case folding leaves alone.
