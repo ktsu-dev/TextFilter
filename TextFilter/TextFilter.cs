@@ -124,8 +124,11 @@ public static partial class TextFilter
 	// filter needs and short enough that a pathological one cannot wedge a UI.
 	private static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromSeconds(1);
 
+	// Stands in for a pattern that does not parse, such as "[" half-way through being typed. One
+	// shared instance, like RegexMatchNothing below, so an invalid pattern costs a cache entry and
+	// nothing more, rather than a fresh regex on every keystroke that produces one.
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "Not available in older frameworks")]
-	private static Regex RegexMatchAnything() => new(".*", RegexOptions.Compiled);
+	private static readonly Regex RegexMatchAnything = new(".*", RegexOptions.None, RegexMatchTimeout);
 
 	// Stands in for a pattern that has already run out of time once. The timeout bounds a single
 	// IsMatch call, so without this the same pathological pattern would pay it again for every word
@@ -694,29 +697,7 @@ public static partial class TextFilter
 		string cacheKey = CacheKey(filter, caseSensitivity);
 		if (!RegexCache.TryGetValue(cacheKey, out Regex? regex))
 		{
-			// CultureInvariant, because IgnoreCase alone folds case using the thread's CurrentCulture.
-			// Under tr-TR that stops "i" and "I" being the same letter, so a filter of "img" no longer
-			// matches "IMG_1234.JPG" -- and the cache below is keyed by pattern and sensitivity only,
-			// so whichever culture happened to compile the pattern first decides the answer for every
-			// later caller on any thread. A filter pattern is machine text, not prose, and the glob
-			// path already folds invariantly, so the two paths now agree. It applies under CaseSensitive
-			// too, because the pattern itself can ask for a fold with an inline (?i), and that fold is
-			// just as culture-dependent and just as cached as the one the option asks for.
-			RegexOptions regexOptions = caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
-				? RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
-				: RegexOptions.Compiled | RegexOptions.CultureInvariant;
-
-			try
-			{
-				regex = new Regex(filter, regexOptions, RegexMatchTimeout);
-			}
-			catch (ArgumentException)
-			{
-				// invalid regex pattern
-				// match anything if the pattern is invalid and cache it so that we don't trigger the exception again
-				regex = RegexMatchAnything();
-			}
-
+			regex = CreateFilterRegex(filter, caseSensitivity);
 			AddBounded(RegexCache, cacheKey, regex);
 		}
 
@@ -744,6 +725,39 @@ public static partial class TextFilter
 			: Enumerable.All;
 
 		return matchFunc(textTokens, textToken => IsMatchWithinTimeout(ref activeRegex, cacheKey, textToken));
+	}
+
+	// Builds the regex DoesMatchRegex caches for a filter pattern.
+	//
+	// Interpreted rather than RegexOptions.Compiled. A filter box produces a new pattern on every
+	// keystroke ("M", "Mo", "Mod", ...), and each one is matched against the visible items once and
+	// then never again. Compiling to IL only pays off over many matches, so for these patterns it
+	// made each keystroke about ten times slower and each cached entry several times larger, and on
+	// .NET 7 and later the interpreter is fast for inputs as short as item names.
+	internal static Regex CreateFilterRegex(string filter, TextFilterCaseSensitivity caseSensitivity)
+	{
+		// CultureInvariant, because IgnoreCase alone folds case using the thread's CurrentCulture.
+		// Under tr-TR that stops "i" and "I" being the same letter, so a filter of "img" no longer
+		// matches "IMG_1234.JPG" -- and the cache in DoesMatchRegex is keyed by pattern and sensitivity
+		// only, so whichever culture happened to compile the pattern first decides the answer for every
+		// later caller on any thread. A filter pattern is machine text, not prose, and the glob
+		// path already folds invariantly, so the two paths now agree. It applies under CaseSensitive
+		// too, because the pattern itself can ask for a fold with an inline (?i), and that fold is
+		// just as culture-dependent and just as cached as the one the option asks for.
+		RegexOptions regexOptions = caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
+			? RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
+			: RegexOptions.CultureInvariant;
+
+		try
+		{
+			return new Regex(filter, regexOptions, RegexMatchTimeout);
+		}
+		catch (ArgumentException)
+		{
+			// An invalid pattern matches anything, and DoesMatchRegex caches the result so the
+			// exception is not triggered again.
+			return RegexMatchAnything;
+		}
 	}
 
 	private static bool IsMatchWithinTimeout(ref Regex regex, string cacheKey, string input)
