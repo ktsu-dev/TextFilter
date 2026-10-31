@@ -979,6 +979,8 @@ public class TextFilterTests
 	[DataRow("[!0-9]", "[!0-9]")]
 	[DataRow("[abc]", "[abc]")]
 	[DataRow("[!-#]", "[!-#]")]
+	[DataRow("[!A-z]", "[!]ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz]")]
+	[DataRow("[A-Z]", "[A-Z]")]
 	[DataRow("[ !-#]", "[ \"#!]")]
 	[DataRow("file[0-", "file[0-")]
 	[DataRow("a]b", "a]b")]
@@ -1035,6 +1037,31 @@ public class TextFilterTests
 		Assert.IsTrue(TextFilter.IsMatch("C", "[0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
 		Assert.IsFalse(TextFilter.IsMatch("C", "[0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
 		Assert.IsFalse(TextFilter.IsMatch("C", "[!0-9a-f]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+	}
+
+	[TestMethod]
+	[DataRow("[.-0]", "/ . 0", "a -")]
+	[DataRow("[!.-0]", "a -", "/ . 0")]
+	[DataRow("[A-z]", "\\ A _ z", "0 {")]
+	[DataRow("[!A-z]", "0 {", "\\ A _ z")]
+	[DataRow("[*-0]", "/ \\ * 0", "a")]
+	[DataRow("[a-z]", "a q z", "/ \\ A")]
+	public void GlobClassRangeSpanningAPathSeparatorMatchesIt(string pattern, string matching, string notMatching)
+	{
+		// Path separators are masked to a private-use character in the pattern and the text, so a range
+		// left for DotNet.Glob to match natively never contained a masked "/" or "\" (#157). The two
+		// separators share one mask (#132), so these rows don't try to tell "/" and "\" apart.
+		ArgumentNullException.ThrowIfNull(matching);
+		ArgumentNullException.ThrowIfNull(notMatching);
+		foreach (string text in matching.Split(' '))
+		{
+			Assert.IsTrue(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString), $"{pattern} should match {text}");
+		}
+
+		foreach (string text in notMatching.Split(' '))
+		{
+			Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString), $"{pattern} should not match {text}");
+		}
 	}
 
 	[TestMethod]
