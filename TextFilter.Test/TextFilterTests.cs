@@ -985,9 +985,6 @@ public class TextFilterTests
 	[DataRow("file[0-", "file[0-")]
 	[DataRow("a]b", "a]b")]
 	[DataRow("[a-]x[0-", "[-a]x[0-")]
-	[DataRow("[a]]", "[a][]]")]
-	[DataRow("[]]]", "[]][]]")]
-	[DataRow("*[[][0-9]]", "*[[][0-9][]]")]
 	public void ExpandGlobClassesRewritesOnlyClassesDotNetGlobMisreads(string token, string expected) =>
 		Assert.AreEqual(expected, TextFilter.ExpandGlobClasses(token));
 
@@ -1030,33 +1027,6 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
-	[DataRow("*[[][0-9]]", "items[3]", "items[3")]
-	[DataRow("[a]]", "a]", "a")]
-	[DataRow("[ab]]", "b]", "b")]
-	[DataRow("[!a]]", "b]", "b")]
-	[DataRow("*[[][0-9a-f]]", "h[c]", "h[c")]
-	[DataRow("[a]]]", "a]]", "a]")]
-	[DataRow("*[[]DEBUG]*", "x[DEBUG]y", "xDEBUGy")]
-	public void GlobClassFollowedByALiteralBracketMatchesTheBracket(string pattern, string matching, string notMatching)
-	{
-		// DotNet.Glob read a "]" straight after a class as one more member of that class, so the pattern
-		// needed one character fewer than it was written with (#172).
-		foreach (TextFilterCaseSensitivity caseSensitivity in new[] { TextFilterCaseSensitivity.CaseSensitive, TextFilterCaseSensitivity.CaseInsensitive })
-		{
-			Assert.IsTrue(TextFilter.IsMatch(matching, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity), $"{pattern} should match {matching} ({caseSensitivity})");
-			Assert.IsFalse(TextFilter.IsMatch(notMatching, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity), $"{pattern} should not match {notMatching} ({caseSensitivity})");
-		}
-	}
-
-	[TestMethod]
-	public void FilterWithAClassFollowedByALiteralBracketKeepsAndExcludesTheRightItems()
-	{
-		List<string> items = ["items[3]", "items[3", "notes.txt"];
-		CollectionAssert.AreEqual(new List<string> { "items[3]" }, TextFilter.Filter(items, "*[[][0-9]]").ToList());
-		CollectionAssert.AreEqual(new List<string> { "items[3", "notes.txt" }, TextFilter.Filter(items, "-*[[][0-9]]").ToList());
-	}
-
-	[TestMethod]
 	public void GlobClassWithBothLetterCasesMatchesEachCase()
 	{
 		Assert.IsTrue(TextFilter.IsMatch("Q", "[a-zA-Z]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseSensitive));
@@ -1092,6 +1062,40 @@ public class TextFilterTests
 		{
 			Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString), $"{pattern} should not match {text}");
 		}
+	}
+
+	[TestMethod]
+	[DataRow("[a]]", "[a][]]")]
+	[DataRow("[]]]", "[]][]]")]
+	[DataRow("*[[][0-9]]", "*[[][0-9][]]")]
+	public void ExpandGlobClassesWritesALiteralBracketAfterAClassAsItsOwnClass(string token, string expected) =>
+		Assert.AreEqual(expected, TextFilter.ExpandGlobClasses(token));
+
+	[TestMethod]
+	[DataRow("*[[][0-9]]", "items[3]", "items[3")]
+	[DataRow("[a]]", "a]", "a")]
+	[DataRow("[ab]]", "b]", "b")]
+	[DataRow("[!a]]", "b]", "b")]
+	[DataRow("*[[][0-9a-f]]", "h[c]", "h[c")]
+	[DataRow("[a]]]", "a]]", "a]")]
+	[DataRow("*[[]DEBUG]*", "x[DEBUG]y", "xDEBUGy")]
+	public void GlobClassFollowedByALiteralBracketMatchesTheBracket(string pattern, string matching, string notMatching)
+	{
+		// DotNet.Glob read a "]" straight after a class as one more member of that class, so the pattern
+		// needed one character fewer than it was written with (#172).
+		foreach (TextFilterCaseSensitivity caseSensitivity in new[] { TextFilterCaseSensitivity.CaseSensitive, TextFilterCaseSensitivity.CaseInsensitive })
+		{
+			Assert.IsTrue(TextFilter.IsMatch(matching, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity), $"{pattern} should match {matching} ({caseSensitivity})");
+			Assert.IsFalse(TextFilter.IsMatch(notMatching, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity), $"{pattern} should not match {notMatching} ({caseSensitivity})");
+		}
+	}
+
+	[TestMethod]
+	public void FilterWithAClassFollowedByALiteralBracketKeepsAndExcludesTheRightItems()
+	{
+		List<string> items = ["items[3]", "items[3", "notes.txt"];
+		CollectionAssert.AreEqual(new List<string> { "items[3]" }, TextFilter.Filter(items, "*[[][0-9]]").ToList());
+		CollectionAssert.AreEqual(new List<string> { "items[3", "notes.txt" }, TextFilter.Filter(items, "-*[[][0-9]]").ToList());
 	}
 
 	[TestMethod]
