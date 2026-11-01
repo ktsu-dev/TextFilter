@@ -42,8 +42,8 @@ public partial class ReadmeTests
 	{
 		for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
 		{
-			string candidate = Path.Combine(directory.FullName, "README.md");
-			if (File.Exists(candidate) && File.Exists(Path.Combine(directory.FullName, "TextFilter.sln")))
+			string candidate = Path.Join(directory.FullName, "README.md");
+			if (File.Exists(candidate) && File.Exists(Path.Join(directory.FullName, "TextFilter.sln")))
 			{
 				return File.ReadAllText(candidate);
 			}
