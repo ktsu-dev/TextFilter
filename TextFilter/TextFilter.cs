@@ -643,9 +643,16 @@ public static partial class TextFilter
 			try
 			{
 				string? expandedToken = ExpandGlobClasses(filterToken);
-				globs = expandedToken is null ? null : [.. ExpandGlobStarSegments(MaskPathSeparators(expandedToken)).Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
-					? Glob.Parse(pattern, CaseInsensitiveGlobOptions)
-					: Glob.Parse(pattern))];
+				// A token made only of "**/" segments expands to the empty string as well as to "*/".
+				// Glob.Parse throws on an empty pattern, which would mark the whole token unparseable and
+				// discard the valid expansions with it. An empty pattern could only match empty text, which
+				// never reaches the matcher, so drop it; a token with nothing left is still unparseable.
+				Glob[]? parsed = expandedToken is null ? null : [.. ExpandGlobStarSegments(MaskPathSeparators(expandedToken))
+					.Where(pattern => pattern.Length != 0)
+					.Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
+						? Glob.Parse(pattern, CaseInsensitiveGlobOptions)
+						: Glob.Parse(pattern))];
+				globs = parsed is { Length: > 0 } ? parsed : null;
 			}
 			catch (Exception ex) when (ex is not OutOfMemoryException)
 			{

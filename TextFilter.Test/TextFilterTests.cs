@@ -1191,6 +1191,39 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("**/")]
+	[DataRow("**/**/")]
+	public void GlobTokenOfOnlyGlobStarSlashMatchesItemsEndingInSeparator(string filter)
+	{
+		List<string> result = [.. TextFilter.Filter(["readme.md", "src/a.cs", "docs/", "a b"], filter)];
+
+		Assert.AreEqual(1, result.Count);
+		Assert.AreEqual("docs/", result[0]);
+	}
+
+	[TestMethod]
+	[DataRow("-**/")]
+	[DataRow("-**/**/")]
+	public void GlobExcludedTokenOfOnlyGlobStarSlashHidesItemsEndingInSeparator(string filter)
+	{
+		List<string> result = [.. TextFilter.Filter(["readme.md", "src/a.cs", "docs/", "a b"], filter)];
+
+		Assert.AreEqual(3, result.Count);
+		Assert.AreEqual("readme.md", result[0]);
+		Assert.AreEqual("src/a.cs", result[1]);
+		Assert.AreEqual("a b", result[2]);
+	}
+
+	[TestMethod]
+	public void GlobRequiredTokenOfOnlyGlobStarSlashMatchesOnlyItemsEndingInSeparator()
+	{
+		List<string> result = [.. TextFilter.Filter(["readme.md", "src/a.cs", "docs/"], "+**/")];
+
+		Assert.AreEqual(1, result.Count);
+		Assert.AreEqual("docs/", result[0]);
+	}
+
+	[TestMethod]
 	public void GlobLiteralSlashInPatternStillMatchesSlashInText()
 	{
 		Assert.IsTrue(TextFilter.IsMatch("docs/readme.md", "docs/*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
