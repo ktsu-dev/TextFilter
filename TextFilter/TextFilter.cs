@@ -124,8 +124,11 @@ public static partial class TextFilter
 	// filter needs and short enough that a pathological one cannot wedge a UI.
 	private static readonly TimeSpan RegexMatchTimeout = TimeSpan.FromSeconds(1);
 
+	// Stands in for a pattern that does not parse, such as "[" half-way through being typed. One
+	// shared instance, like RegexMatchNothing below, so an invalid pattern costs a cache entry and
+	// nothing more, rather than a fresh regex on every keystroke that produces one.
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "Not available in older frameworks")]
-	private static Regex RegexMatchAnything() => new(".*", RegexOptions.Compiled);
+	private static readonly Regex RegexMatchAnything = new(".*", RegexOptions.None, RegexMatchTimeout);
 
 	// Stands in for a pattern that has already run out of time once. The timeout bounds a single
 	// IsMatch call, so without this the same pathological pattern would pay it again for every word
@@ -449,7 +452,8 @@ public static partial class TextFilter
 	// Masking also hides the separators DotNet.Glob needs to recognise "**/" as "zero or more path
 	// segments", leaving "**" followed by a literal character. Since * already crosses the masked
 	// separator, each "**/" is expanded here instead: dropped, for the zero-segment case, or kept as
-	// "*/", for "anything ending at a separator". A token matches if any expansion does.
+	// "*/", for "anything ending at a separator". A token matches if any expansion does. Only a "**/"
+	// that starts the token or follows a separator is dropped, since one joined to a literal is a "*".
 	private const string MaskedGlobStarSegment = "**\uE000";
 
 	// Each "**/" doubles the expansions, so only this many are expanded both ways; any beyond it keep
@@ -471,10 +475,14 @@ public static partial class TextFilter
 
 			foreach (string prefix in expansions)
 			{
-				next.Add(prefix + literal + "*" + MaskedPathSeparator);
-				if (expandBothWays)
+				string before = prefix + literal;
+				next.Add(before + "*" + MaskedPathSeparator);
+
+				// Only a "**" that is a whole segment can match zero segments; joined to a literal, as
+				// in "foo**/bar", it is just "*", and dropping it would splice "foo" onto "bar".
+				if (expandBothWays && (before.Length == 0 || before[^1] == MaskedPathSeparator))
 				{
-					next.Add(prefix + literal);
+					next.Add(before);
 				}
 			}
 
@@ -525,7 +533,7 @@ public static partial class TextFilter
 			}
 
 			string content = token[contentStart..close];
-			string? rewritten = RewriteGlobClass(token[open..(close + 1)], content, negated);
+			string? rewritten = RewriteGlobClass(content, negated);
 			if (rewritten is null)
 			{
 				return null;
@@ -533,17 +541,26 @@ public static partial class TextFilter
 
 			result.Append(token, index, open - index).Append(rewritten);
 			index = close + 1;
+
+			// DotNet.Glob reads a "]" straight after a class as one more member of it, so "[a]]" would
+			// match "a" and not "a]". Each such "]" is written as the one-member class "[]]", which it
+			// reads as the literal the pattern means.
+			while (index < token.Length && token[index] == ']')
+			{
+				result.Append("[]]");
+				index++;
+			}
 		}
 
 		return result.Append(token, index, token.Length - index).ToString();
 	}
 
 	// Returns the class as DotNet.Glob should see it, or null if it cannot be listed.
-	private static string? RewriteGlobClass(string globClass, string content, bool negated)
+	private static string? RewriteGlobClass(string content, bool negated)
 	{
 		if (!content.Contains('-') || IsNativeGlobRange(content))
 		{
-			return globClass;
+			return (negated ? "[!" : "[") + content + "]";
 		}
 
 		if (IsReversedLetterRange(content))
@@ -555,10 +572,12 @@ public static partial class TextFilter
 	}
 
 	// Returns the index of the "]" closing the class opened at "open", or -1 if it is never closed.
+	// A class opening with "^" is negated, as in bash, gitignore and regex, the same as one opening with
+	// "!". DotNet.Glob only knows "!", so the caller writes the negation back out as "!".
 	private static int FindGlobClassEnd(string token, int open, out bool negated, out int contentStart)
 	{
 		contentStart = open + 1;
-		negated = contentStart < token.Length && token[contentStart] == '!';
+		negated = contentStart < token.Length && token[contentStart] is '!' or '^';
 		if (negated)
 		{
 			contentStart++;
@@ -599,7 +618,8 @@ public static partial class TextFilter
 		while (i < content.Length)
 		{
 			char first = content[i];
-			bool isRange = i + 2 < content.Length && content[i + 1] == '-' && !(i == 0 && first == ']');
+			// A leading "]" can start a range too: "[]-a]" is "]".."a", as in POSIX.
+			bool isRange = i + 2 < content.Length && content[i + 1] == '-';
 			if (!isRange)
 			{
 				members.Add(first);
@@ -667,9 +687,16 @@ public static partial class TextFilter
 			try
 			{
 				string? expandedToken = ExpandGlobClasses(filterToken);
-				globs = expandedToken is null ? null : [.. ExpandGlobStarSegments(MaskPathSeparators(expandedToken)).Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
-					? Glob.Parse(pattern, CaseInsensitiveGlobOptions)
-					: Glob.Parse(pattern))];
+				// A token made only of "**/" segments expands to the empty string as well as to "*/".
+				// Glob.Parse throws on an empty pattern, which would mark the whole token unparseable and
+				// discard the valid expansions with it. An empty pattern could only match empty text, which
+				// never reaches the matcher, so drop it; a token with nothing left is still unparseable.
+				Glob[]? parsed = expandedToken is null ? null : [.. ExpandGlobStarSegments(MaskPathSeparators(expandedToken))
+					.Where(pattern => pattern.Length != 0)
+					.Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
+						? Glob.Parse(pattern, CaseInsensitiveGlobOptions)
+						: Glob.Parse(pattern))];
+				globs = parsed is { Length: > 0 } ? parsed : null;
 			}
 			catch (Exception ex) when (ex is not OutOfMemoryException)
 			{
@@ -718,29 +745,7 @@ public static partial class TextFilter
 		string cacheKey = CacheKey(filter, caseSensitivity);
 		if (!RegexCache.TryGetValue(cacheKey, out Regex? regex))
 		{
-			// CultureInvariant, because IgnoreCase alone folds case using the thread's CurrentCulture.
-			// Under tr-TR that stops "i" and "I" being the same letter, so a filter of "img" no longer
-			// matches "IMG_1234.JPG" -- and the cache below is keyed by pattern and sensitivity only,
-			// so whichever culture happened to compile the pattern first decides the answer for every
-			// later caller on any thread. A filter pattern is machine text, not prose, and the glob
-			// path already folds invariantly, so the two paths now agree. It applies under CaseSensitive
-			// too, because the pattern itself can ask for a fold with an inline (?i), and that fold is
-			// just as culture-dependent and just as cached as the one the option asks for.
-			RegexOptions regexOptions = caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
-				? RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
-				: RegexOptions.Compiled | RegexOptions.CultureInvariant;
-
-			try
-			{
-				regex = new Regex(filter, regexOptions, RegexMatchTimeout);
-			}
-			catch (ArgumentException)
-			{
-				// invalid regex pattern
-				// match anything if the pattern is invalid and cache it so that we don't trigger the exception again
-				regex = RegexMatchAnything();
-			}
-
+			regex = CreateFilterRegex(filter, caseSensitivity);
 			AddBounded(RegexCache, cacheKey, regex);
 		}
 
@@ -768,6 +773,39 @@ public static partial class TextFilter
 			: Enumerable.All;
 
 		return matchFunc(textTokens, textToken => IsMatchWithinTimeout(ref activeRegex, cacheKey, textToken));
+	}
+
+	// Builds the regex DoesMatchRegex caches for a filter pattern.
+	//
+	// Interpreted rather than RegexOptions.Compiled. A filter box produces a new pattern on every
+	// keystroke ("M", "Mo", "Mod", ...), and each one is matched against the visible items once and
+	// then never again. Compiling to IL only pays off over many matches, so for these patterns it
+	// made each keystroke about ten times slower and each cached entry several times larger, and on
+	// .NET 7 and later the interpreter is fast for inputs as short as item names.
+	internal static Regex CreateFilterRegex(string filter, TextFilterCaseSensitivity caseSensitivity)
+	{
+		// CultureInvariant, because IgnoreCase alone folds case using the thread's CurrentCulture.
+		// Under tr-TR that stops "i" and "I" being the same letter, so a filter of "img" no longer
+		// matches "IMG_1234.JPG" -- and the cache in DoesMatchRegex is keyed by pattern and sensitivity
+		// only, so whichever culture happened to compile the pattern first decides the answer for every
+		// later caller on any thread. A filter pattern is machine text, not prose, and the glob
+		// path already folds invariantly, so the two paths now agree. It applies under CaseSensitive
+		// too, because the pattern itself can ask for a fold with an inline (?i), and that fold is
+		// just as culture-dependent and just as cached as the one the option asks for.
+		RegexOptions regexOptions = caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
+			? RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
+			: RegexOptions.CultureInvariant;
+
+		try
+		{
+			return new Regex(filter, regexOptions, RegexMatchTimeout);
+		}
+		catch (ArgumentException)
+		{
+			// An invalid pattern matches anything, and DoesMatchRegex caches the result so the
+			// exception is not triggered again.
+			return RegexMatchAnything;
+		}
 	}
 
 	private static bool IsMatchWithinTimeout(ref Regex regex, string cacheKey, string input)
