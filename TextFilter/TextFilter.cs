@@ -568,6 +568,15 @@ public static partial class TextFilter
 
 			result.Append(token, index, open - index).Append(rewritten);
 			index = close + 1;
+
+			// DotNet.Glob reads a "]" straight after a class as one more member of it, so "[a]]" would
+			// match "a" and not "a]". Each such "]" is written as the one-member class "[]]", which it
+			// reads as the literal the pattern means.
+			while (index < token.Length && token[index] == ']')
+			{
+				result.Append("[]]");
+				index++;
+			}
 		}
 
 		return result.Append(token, index, token.Length - index).ToString();
@@ -610,7 +619,8 @@ public static partial class TextFilter
 		while (i < content.Length)
 		{
 			char first = content[i];
-			bool isRange = i + 2 < content.Length && content[i + 1] == '-' && !(i == 0 && first == ']');
+			// A leading "]" can start a range too: "[]-a]" is "]".."a", as in POSIX.
+			bool isRange = i + 2 < content.Length && content[i + 1] == '-';
 			if (!isRange)
 			{
 				members.Add(first);
@@ -678,9 +688,16 @@ public static partial class TextFilter
 			try
 			{
 				string? expandedToken = ExpandGlobClasses(filterToken);
-				globs = expandedToken is null ? null : [.. ExpandGlobStarSegments(MaskPathSeparators(expandedToken)).Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
-					? Glob.Parse(pattern, CaseInsensitiveGlobOptions)
-					: Glob.Parse(pattern))];
+				// A token made only of "**/" segments expands to the empty string as well as to "*/".
+				// Glob.Parse throws on an empty pattern, which would mark the whole token unparseable and
+				// discard the valid expansions with it. An empty pattern could only match empty text, which
+				// never reaches the matcher, so drop it; a token with nothing left is still unparseable.
+				Glob[]? parsed = expandedToken is null ? null : [.. ExpandGlobStarSegments(MaskPathSeparators(expandedToken))
+					.Where(pattern => pattern.Length != 0)
+					.Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
+						? Glob.Parse(pattern, CaseInsensitiveGlobOptions)
+						: Glob.Parse(pattern))];
+				globs = parsed is { Length: > 0 } ? parsed : null;
 			}
 			catch (Exception ex) when (ex is not OutOfMemoryException)
 			{

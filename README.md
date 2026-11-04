@@ -52,7 +52,7 @@ using ktsu.TextFilter;
 string text = "Hello, World!";
 string pattern = "Hello*";
 
-bool isMatch = TextFilter.Match(text, pattern);
+bool isMatch = TextFilter.IsMatch(text, pattern);
 ```
 
 ### Filtering Collections
@@ -81,7 +81,8 @@ IEnumerable<string> ranked = TextFilter.Rank(texts, pattern);
 
 ### Match Options
 
-You can customize how matching is performed using the `MatchOptions` enum:
+You can customize how matching is performed using the `TextFilterMatchOptions` enum. The default is
+`ByWordAny`:
 
 ```csharp
 using ktsu.TextFilter;
@@ -89,14 +90,17 @@ using ktsu.TextFilter;
 string text = "Hello beautiful world";
 string pattern = "hello world";
 
-// Match by any word in the pattern
-bool anyWordMatch = TextFilter.Match(text, pattern, MatchOptions.AnyWord);
+// Match by any word in the pattern (the default)
+bool anyWordMatch = TextFilter.IsMatch(text, pattern,
+    TextFilterType.Glob, TextFilterMatchOptions.ByWordAny);                               // true
 
 // Match by all words in the pattern
-bool allWordsMatch = TextFilter.Match(text, pattern, MatchOptions.AllWords);
+bool allWordsMatch = TextFilter.IsMatch(text, pattern,
+    TextFilterType.Glob, TextFilterMatchOptions.ByWordAll);                               // false
 
 // Match the entire string
-bool wholeStringMatch = TextFilter.Match(text, pattern, MatchOptions.WholeString);
+bool wholeStringMatch = TextFilter.IsMatch(text, pattern,
+    TextFilterType.Glob, TextFilterMatchOptions.ByWholeString);                           // false
 ```
 
 ### Case Sensitivity
@@ -148,13 +152,13 @@ string globPattern = "Hello*";
 string regexPattern = "^Hello";
 
 // Glob pattern matching
-bool globMatch = TextFilter.Match(text, globPattern, filterType: FilterType.Glob);
+bool globMatch = TextFilter.IsMatch(text, globPattern, filterType: TextFilterType.Glob);
 
 // Regular expression matching
-bool regexMatch = TextFilter.Match(text, regexPattern, filterType: FilterType.Regex);
+bool regexMatch = TextFilter.IsMatch(text, regexPattern, filterType: TextFilterType.Regex);
 
 // Fuzzy matching
-bool fuzzyMatch = TextFilter.Match(text, "Helo", filterType: FilterType.Fuzzy);
+bool fuzzyMatch = TextFilter.IsMatch(text, "Helo", filterType: TextFilterType.Fuzzy);
 ```
 
 ## API Reference
@@ -167,25 +171,29 @@ The primary class for text filtering operations.
 
 | Name | Return Type | Description |
 |------|-------------|-------------|
-| `Match(string text, string pattern, MatchOptions options = MatchOptions.WholeString, FilterType filterType = FilterType.Glob)` | `bool` | Tests if the input text matches the specified pattern |
-| `Filter(IEnumerable<string> texts, string pattern, MatchOptions options = MatchOptions.WholeString, FilterType filterType = FilterType.Glob)` | `IEnumerable<string>` | Returns all texts that match the pattern |
-| `Rank(IEnumerable<string> texts, string pattern, MatchOptions options = MatchOptions.WholeString)` | `IEnumerable<string>` | Returns texts ranked by how well they match the pattern |
+| `IsMatch(string text, string filter, TextFilterType filterType = TextFilterType.Glob, TextFilterMatchOptions textFilterMatchOptions = TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)` | `bool` | Tests if the input text matches the specified filter |
+| `IsMatch(string text, string filter, out int score, ...)` | `bool` | As above, and also returns the fuzzy score (`int.MinValue` for glob and regex) |
+| `Filter(IEnumerable<string> strings, string filter, TextFilterType filterType = TextFilterType.Glob, TextFilterMatchOptions textFilterMatchOptions = TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity caseSensitivity = TextFilterCaseSensitivity.CaseSensitive)` | `IEnumerable<string>` | Returns all strings that match the filter |
+| `Filter<TItem>(IEnumerable<TItem> items, Func<TItem, string> keySelector, string filter, ...)` | `IEnumerable<TItem>` | Returns all items whose key matches the filter |
+| `Rank(IEnumerable<string> strings, string fuzzyFilter)` | `IEnumerable<string>` | Returns the strings ranked by how well they fuzzy-match the filter |
+| `Rank<TItem>(IEnumerable<TItem> items, Func<TItem, string> keySelector, string fuzzyFilter)` | `IEnumerable<TItem>` | Returns the items ranked by how well their key fuzzy-matches the filter |
+| `GetHint(TextFilterType filterType)` | `string` | Returns a short description of the syntax a filter type accepts |
 
 ### Enums
 
-#### `MatchOptions`
+#### `TextFilterMatchOptions`
 
 | Value | Description |
 |-------|-------------|
-| `WholeString` | Match the entire string against the pattern |
-| `AllWords` | Match all words in the pattern against the string |
-| `AnyWord` | Match any word in the pattern against the string |
+| `ByWholeString` | Match the entire string against the pattern |
+| `ByWordAll` | Match all words in the pattern against the string |
+| `ByWordAny` | Match any word in the pattern against the string (the default) |
 
-#### `FilterType`
+#### `TextFilterType`
 
 | Value | Description |
 |-------|-------------|
-| `Glob` | Use glob pattern matching |
+| `Glob` | Use glob pattern matching (the default) |
 | `Regex` | Use regular expression matching |
 | `Fuzzy` | Use fuzzy matching |
 
@@ -207,4 +215,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) f
 ## Acknowledgements
 
 - [DotNet.Glob](https://github.com/dazinator/DotNet.Glob) for glob pattern matching.
-- [ktsu.FuzzySearch](https://github.com/ktsu-io/ktsu.FuzzySearch) for fuzzy matching.
+- [ktsu.FuzzySearch](https://github.com/ktsu-dev/FuzzySearch) for fuzzy matching.
