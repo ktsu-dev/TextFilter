@@ -544,6 +544,15 @@ public static partial class TextFilter
 
 			result.Append(token, index, open - index).Append(rewritten);
 			index = close + 1;
+
+			// DotNet.Glob reads a "]" straight after a class as one more member of it, so "[a]]" would
+			// match "a" and not "a]". Each such "]" is written as the one-member class "[]]", which it
+			// reads as the literal the pattern means.
+			while (index < token.Length && token[index] == ']')
+			{
+				result.Append("[]]");
+				index++;
+			}
 		}
 
 		return result.Append(token, index, token.Length - index).ToString();
