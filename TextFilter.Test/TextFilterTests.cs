@@ -898,6 +898,44 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow(TextFilterCaseSensitivity.CaseSensitive)]
+	[DataRow(TextFilterCaseSensitivity.CaseInsensitive)]
+	public void FilterRegexesAreInterpretedNotCompiled(TextFilterCaseSensitivity caseSensitivity)
+	{
+		// A filter box makes a new pattern on every keystroke and matches it once, so compiling each
+		// one to IL costs far more than it saves (#144).
+		System.Text.RegularExpressions.Regex regex = TextFilter.CreateFilterRegex(@"Module1\d+/File\w*\.cs", caseSensitivity);
+
+		Assert.AreEqual(
+			System.Text.RegularExpressions.RegexOptions.None,
+			regex.Options & System.Text.RegularExpressions.RegexOptions.Compiled,
+			"A per-keystroke filter pattern should not be compiled to IL.");
+		Assert.AreEqual(
+			System.Text.RegularExpressions.RegexOptions.CultureInvariant,
+			regex.Options & System.Text.RegularExpressions.RegexOptions.CultureInvariant,
+			"Case folding must stay culture-invariant.");
+		Assert.AreEqual(
+			caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive,
+			regex.Options.HasFlag(System.Text.RegularExpressions.RegexOptions.IgnoreCase));
+		Assert.AreEqual(System.TimeSpan.FromSeconds(1), regex.MatchTimeout, "The match timeout must still apply.");
+	}
+
+	[TestMethod]
+	public void AnInvalidRegexFilterSharesOneInterpretedMatchAnythingInstance()
+	{
+		// An invalid pattern, such as "[" while it is still being typed, used to build and compile a
+		// new ".*" each time. It now reuses one instance, which is interpreted and bounded by the timeout.
+		System.Text.RegularExpressions.Regex first = TextFilter.CreateFilterRegex("[", TextFilterCaseSensitivity.CaseSensitive);
+		System.Text.RegularExpressions.Regex second = TextFilter.CreateFilterRegex("(unclosed", TextFilterCaseSensitivity.CaseInsensitive);
+
+		Assert.AreSame(first, second, "Every invalid pattern should fall back to the same cached instance.");
+		Assert.AreEqual(System.Text.RegularExpressions.RegexOptions.None, first.Options & System.Text.RegularExpressions.RegexOptions.Compiled);
+		Assert.AreEqual(System.TimeSpan.FromSeconds(1), first.MatchTimeout);
+		Assert.IsTrue(first.IsMatch("anything at all"), "The fallback should still match anything.");
+		Assert.IsTrue(TextFilter.DoesMatchRegex("hello world", "[", TextFilterMatchOptions.ByWordAny));
+	}
+
+	[TestMethod]
 	public void ACachedPatternStillMatchesAfterTheCacheHasReset()
 	{
 		// Guards the over-correction: a bound that dropped correctness rather than entries. The same
