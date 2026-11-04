@@ -2,8 +2,10 @@
 
 Changes since v1.7.13:
 
+- Extract the class opening out of the nested ternary in ExpandGlobClasses (matt-edmondson)
 - Move the #157 tests away from the lines #158's tests add to (matt-edmondson)
 - Match a path separator inside a glob class range that spans it [patch] (matt-edmondson)
+- Negate a glob class that opens with ^, the same as one that opens with ! [patch] (matt-edmondson)
 - Merge main into fix/141-ignore-unparseable-optional-glob (Claude)
 - Restore the [TestMethod] the merge resolution dropped (Claude)
 - Merge main into fix/141-ignore-unparseable-optional-glob (Claude)

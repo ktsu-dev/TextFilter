@@ -898,6 +898,44 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow(TextFilterCaseSensitivity.CaseSensitive)]
+	[DataRow(TextFilterCaseSensitivity.CaseInsensitive)]
+	public void FilterRegexesAreInterpretedNotCompiled(TextFilterCaseSensitivity caseSensitivity)
+	{
+		// A filter box makes a new pattern on every keystroke and matches it once, so compiling each
+		// one to IL costs far more than it saves (#144).
+		System.Text.RegularExpressions.Regex regex = TextFilter.CreateFilterRegex(@"Module1\d+/File\w*\.cs", caseSensitivity);
+
+		Assert.AreEqual(
+			System.Text.RegularExpressions.RegexOptions.None,
+			regex.Options & System.Text.RegularExpressions.RegexOptions.Compiled,
+			"A per-keystroke filter pattern should not be compiled to IL.");
+		Assert.AreEqual(
+			System.Text.RegularExpressions.RegexOptions.CultureInvariant,
+			regex.Options & System.Text.RegularExpressions.RegexOptions.CultureInvariant,
+			"Case folding must stay culture-invariant.");
+		Assert.AreEqual(
+			caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive,
+			regex.Options.HasFlag(System.Text.RegularExpressions.RegexOptions.IgnoreCase));
+		Assert.AreEqual(System.TimeSpan.FromSeconds(1), regex.MatchTimeout, "The match timeout must still apply.");
+	}
+
+	[TestMethod]
+	public void AnInvalidRegexFilterSharesOneInterpretedMatchAnythingInstance()
+	{
+		// An invalid pattern, such as "[" while it is still being typed, used to build and compile a
+		// new ".*" each time. It now reuses one instance, which is interpreted and bounded by the timeout.
+		System.Text.RegularExpressions.Regex first = TextFilter.CreateFilterRegex("[", TextFilterCaseSensitivity.CaseSensitive);
+		System.Text.RegularExpressions.Regex second = TextFilter.CreateFilterRegex("(unclosed", TextFilterCaseSensitivity.CaseInsensitive);
+
+		Assert.AreSame(first, second, "Every invalid pattern should fall back to the same cached instance.");
+		Assert.AreEqual(System.Text.RegularExpressions.RegexOptions.None, first.Options & System.Text.RegularExpressions.RegexOptions.Compiled);
+		Assert.AreEqual(System.TimeSpan.FromSeconds(1), first.MatchTimeout);
+		Assert.IsTrue(first.IsMatch("anything at all"), "The fallback should still match anything.");
+		Assert.IsTrue(TextFilter.DoesMatchRegex("hello world", "[", TextFilterMatchOptions.ByWordAny));
+	}
+
+	[TestMethod]
 	public void ACachedPatternStillMatchesAfterTheCacheHasReset()
 	{
 		// Guards the over-correction: a bound that dropped correctness rather than entries. The same
@@ -985,6 +1023,13 @@ public class TextFilterTests
 	[DataRow("file[0-", "file[0-")]
 	[DataRow("a]b", "a]b")]
 	[DataRow("[a-]x[0-", "[-a]x[0-")]
+	[DataRow("x[^a]", "x[!a]")]
+	[DataRow("[^a-]", "[!-a]")]
+	[DataRow("[^0-9]", "[!0-9]")]
+	[DataRow("[^0-9a-f]", "[!0123456789abcdef]")]
+	[DataRow("[^]a]", "[!]a]")]
+	[DataRow("x[a^]", "x[a^]")]
+	[DataRow("x[^a", "x[^a")]
 	public void ExpandGlobClassesRewritesOnlyClassesDotNetGlobMisreads(string token, string expected) =>
 		Assert.AreEqual(expected, TextFilter.ExpandGlobClasses(token));
 
@@ -1004,6 +1049,8 @@ public class TextFilterTests
 	[DataRow("file[0-9a-]", "file5 filea file-", "fileb file_")]
 	[DataRow("[]a-]", "a - ]", "b [")]
 	[DataRow("[!]a-]", "b [", "a - ]")]
+	[DataRow("[]-a]", "] ^ _ ` a", "- b [")]
+	[DataRow("[!]-a]", "- b [", "] ^ _ ` a")]
 	[DataRow("[!-#]", "a $ ! \"", "- #")]
 	public void GlobClassMatchesEveryMemberOfEveryRange(string pattern, string matching, string notMatching)
 	{
@@ -1024,6 +1071,34 @@ public class TextFilterTests
 				Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity), $"{pattern} should not match {text} ({caseSensitivity})");
 			}
 		}
+	}
+
+	[TestMethod]
+	[DataRow("x[^a]", "xb xc x! x^", "xa")]
+	[DataRow("x[!a]", "xb xc x^", "xa")]
+	[DataRow("x[^a-]", "xb x^", "xa x-")]
+	[DataRow("x[^0-9a-f]", "xg x_", "x0 x5 xc")]
+	[DataRow("x[a^]", "xa x^", "xb")]
+	public void GlobClassOpeningWithCaretIsNegated(string pattern, string matching, string notMatching)
+	{
+		// DotNet.Glob only reads "!" as negation, so "[^a]" used to be the positive class {^, a} and
+		// returned exactly the items the user meant to exclude (#158).
+		ArgumentNullException.ThrowIfNull(matching);
+		ArgumentNullException.ThrowIfNull(notMatching);
+		foreach (TextFilterCaseSensitivity caseSensitivity in new[] { TextFilterCaseSensitivity.CaseSensitive, TextFilterCaseSensitivity.CaseInsensitive })
+		{
+			foreach (string text in matching.Split(' '))
+			{
+				Assert.IsTrue(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity), $"{pattern} should match {text} ({caseSensitivity})");
+			}
+
+			foreach (string text in notMatching.Split(' '))
+			{
+				Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity), $"{pattern} should not match {text} ({caseSensitivity})");
+			}
+		}
+
+		Assert.IsFalse(TextFilter.IsMatch("XA", "x[^a]", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity.CaseInsensitive));
 	}
 
 	[TestMethod]
@@ -1062,6 +1137,40 @@ public class TextFilterTests
 		{
 			Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString), $"{pattern} should not match {text}");
 		}
+	}
+
+	[TestMethod]
+	[DataRow("[a]]", "[a][]]")]
+	[DataRow("[]]]", "[]][]]")]
+	[DataRow("*[[][0-9]]", "*[[][0-9][]]")]
+	public void ExpandGlobClassesWritesALiteralBracketAfterAClassAsItsOwnClass(string token, string expected) =>
+		Assert.AreEqual(expected, TextFilter.ExpandGlobClasses(token));
+
+	[TestMethod]
+	[DataRow("*[[][0-9]]", "items[3]", "items[3")]
+	[DataRow("[a]]", "a]", "a")]
+	[DataRow("[ab]]", "b]", "b")]
+	[DataRow("[!a]]", "b]", "b")]
+	[DataRow("*[[][0-9a-f]]", "h[c]", "h[c")]
+	[DataRow("[a]]]", "a]]", "a]")]
+	[DataRow("*[[]DEBUG]*", "x[DEBUG]y", "xDEBUGy")]
+	public void GlobClassFollowedByALiteralBracketMatchesTheBracket(string pattern, string matching, string notMatching)
+	{
+		// DotNet.Glob read a "]" straight after a class as one more member of that class, so the pattern
+		// needed one character fewer than it was written with (#172).
+		foreach (TextFilterCaseSensitivity caseSensitivity in new[] { TextFilterCaseSensitivity.CaseSensitive, TextFilterCaseSensitivity.CaseInsensitive })
+		{
+			Assert.IsTrue(TextFilter.IsMatch(matching, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity), $"{pattern} should match {matching} ({caseSensitivity})");
+			Assert.IsFalse(TextFilter.IsMatch(notMatching, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, caseSensitivity), $"{pattern} should not match {notMatching} ({caseSensitivity})");
+		}
+	}
+
+	[TestMethod]
+	public void FilterWithAClassFollowedByALiteralBracketKeepsAndExcludesTheRightItems()
+	{
+		List<string> items = ["items[3]", "items[3", "notes.txt"];
+		CollectionAssert.AreEqual(new List<string> { "items[3]" }, TextFilter.Filter(items, "*[[][0-9]]").ToList());
+		CollectionAssert.AreEqual(new List<string> { "items[3", "notes.txt" }, TextFilter.Filter(items, "-*[[][0-9]]").ToList());
 	}
 
 	[TestMethod]
@@ -1175,6 +1284,26 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("foobar", "foo**/bar")]
+	[DataRow("ab", "a**/b")]
+	[DataRow("buildout", "build**/out")]
+	public void GlobStarJoinedToLiteralRequiresSeparator(string text, string filter)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsFalse(TextFilter.IsMatch(text, filter));
+	}
+
+	[TestMethod]
+	[DataRow("foo/bar", "foo**/bar")]
+	[DataRow("fooX/bar", "foo**/bar")]
+	[DataRow("bar", "**/bar")]
+	[DataRow("a/b", "a/**/b")]
+	public void GlobStarJoinedToLiteralStillMatchesWithSeparator(string text, string filter)
+	{
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
 	public void GlobStarSlashFiltersPathItems()
 	{
 		List<string> result = [.. TextFilter.Filter(["src/a.cs", "src/x/a.cs", "docs/readme.md"], "src/**/*.cs", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString)];
@@ -1188,6 +1317,39 @@ public class TextFilterTests
 	public void GlobStarSlashMatchesCaseInsensitively()
 	{
 		Assert.IsTrue(TextFilter.IsMatch("Docs/README.md", "**/readme.md", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+	}
+
+	[TestMethod]
+	[DataRow("**/")]
+	[DataRow("**/**/")]
+	public void GlobTokenOfOnlyGlobStarSlashMatchesItemsEndingInSeparator(string filter)
+	{
+		List<string> result = [.. TextFilter.Filter(["readme.md", "src/a.cs", "docs/", "a b"], filter)];
+
+		Assert.AreEqual(1, result.Count);
+		Assert.AreEqual("docs/", result[0]);
+	}
+
+	[TestMethod]
+	[DataRow("-**/")]
+	[DataRow("-**/**/")]
+	public void GlobExcludedTokenOfOnlyGlobStarSlashHidesItemsEndingInSeparator(string filter)
+	{
+		List<string> result = [.. TextFilter.Filter(["readme.md", "src/a.cs", "docs/", "a b"], filter)];
+
+		Assert.AreEqual(3, result.Count);
+		Assert.AreEqual("readme.md", result[0]);
+		Assert.AreEqual("src/a.cs", result[1]);
+		Assert.AreEqual("a b", result[2]);
+	}
+
+	[TestMethod]
+	public void GlobRequiredTokenOfOnlyGlobStarSlashMatchesOnlyItemsEndingInSeparator()
+	{
+		List<string> result = [.. TextFilter.Filter(["readme.md", "src/a.cs", "docs/"], "+**/")];
+
+		Assert.AreEqual(1, result.Count);
+		Assert.AreEqual("docs/", result[0]);
 	}
 
 	[TestMethod]
@@ -1404,5 +1566,58 @@ public class TextFilterTests
 		Assert.IsTrue(TextFilter.IsMatch("b.png", "*.png -a.*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
 		Assert.IsTrue(TextFilter.IsMatch("a.png", "*.png +a.*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
 		Assert.IsFalse(TextFilter.IsMatch("b.png", "*.png +a.*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	// Assemblies compiled against 1.6 or earlier bind to these exact signatures, so each must still
+	// exist in the binary even though source callers now resolve to the case-sensitivity overloads.
+	[TestMethod]
+	[DataRow(nameof(TextFilter.Filter), new[] { typeof(IEnumerable<string>), typeof(string), typeof(TextFilterType), typeof(TextFilterMatchOptions) })]
+	[DataRow(nameof(TextFilter.IsMatch), new[] { typeof(string), typeof(string), typeof(TextFilterType), typeof(TextFilterMatchOptions) })]
+	[DataRow(nameof(TextFilter.DoesMatchGlob), new[] { typeof(string), typeof(string), typeof(TextFilterMatchOptions) })]
+	[DataRow(nameof(TextFilter.DoesMatchRegex), new[] { typeof(string), typeof(string), typeof(TextFilterMatchOptions) })]
+	[DataRow(nameof(TextFilter.AnyTokenMatchesGlobFilter), new[] { typeof(string), typeof(HashSet<string>) })]
+	[DataRow(nameof(TextFilter.AllTokensMatchGlobFilter), new[] { typeof(string), typeof(HashSet<string>) })]
+	public void Pre17SignatureStillExists(string methodName, Type[] parameterTypes)
+	{
+		Assert.IsNotNull(typeof(TextFilter).GetMethod(methodName, parameterTypes), $"{methodName}({string.Join(", ", parameterTypes.Select(t => t.Name))}) is missing");
+	}
+
+	[TestMethod]
+	public void Pre17IsMatchWithScoreSignatureStillExists()
+	{
+		Type[] parameterTypes = [typeof(string), typeof(string), typeof(int).MakeByRefType(), typeof(TextFilterType), typeof(TextFilterMatchOptions)];
+		Assert.IsNotNull(typeof(TextFilter).GetMethod(nameof(TextFilter.IsMatch), parameterTypes));
+	}
+
+	[TestMethod]
+	public void Pre17GenericFilterSignatureStillExists()
+	{
+		Assert.IsTrue(typeof(TextFilter).GetMethods().Any(m =>
+			m.Name == nameof(TextFilter.Filter)
+			&& m.IsGenericMethodDefinition
+			&& m.GetParameters().Length == 5
+			&& m.GetParameters()[4].ParameterType == typeof(TextFilterMatchOptions)));
+	}
+
+	[TestMethod]
+	public void Pre17SignaturesMatchCaseSensitively()
+	{
+		object?[] args = ["Hello World", "hello", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny];
+		Type[] parameterTypes = [typeof(string), typeof(string), typeof(TextFilterType), typeof(TextFilterMatchOptions)];
+		System.Reflection.MethodInfo? isMatch = typeof(TextFilter).GetMethod(nameof(TextFilter.IsMatch), parameterTypes);
+		Assert.IsNotNull(isMatch);
+		Assert.IsFalse((bool)isMatch.Invoke(null, args)!);
+		Assert.IsTrue((bool)isMatch.Invoke(null, ["Hello World", "Hello", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny])!);
+	}
+
+	[TestMethod]
+	public void SourceCallsWithAllPre17ArgumentsStillCompileAndMatchCaseSensitively()
+	{
+		Assert.IsFalse(TextFilter.IsMatch("Hello World", "hello", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny));
+		Assert.IsTrue(TextFilter.IsMatch("Hello World", "hello", TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, TextFilterCaseSensitivity.CaseInsensitive));
+		Assert.IsTrue(TextFilter.AnyTokenMatchesGlobFilter("Hel*", ["Hello"]));
+		Assert.IsTrue(TextFilter.AllTokensMatchGlobFilter("hel*", ["Hello"], TextFilterCaseSensitivity.CaseInsensitive));
+		Assert.HasCount(1, TextFilter.Filter(["Hello", "hello"], "Hello", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString).ToList());
+		Assert.HasCount(1, TextFilter.Filter([(1, "Hello"), (2, "hello")], t => t.Item2, "Hello", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString).ToList());
 	}
 }
