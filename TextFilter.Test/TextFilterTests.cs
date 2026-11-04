@@ -1049,6 +1049,8 @@ public class TextFilterTests
 	[DataRow("file[0-9a-]", "file5 filea file-", "fileb file_")]
 	[DataRow("[]a-]", "a - ]", "b [")]
 	[DataRow("[!]a-]", "b [", "a - ]")]
+	[DataRow("[]-a]", "] ^ _ ` a", "- b [")]
+	[DataRow("[!]-a]", "- b [", "] ^ _ ` a")]
 	[DataRow("[!-#]", "a $ ! \"", "- #")]
 	public void GlobClassMatchesEveryMemberOfEveryRange(string pattern, string matching, string notMatching)
 	{

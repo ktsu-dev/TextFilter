@@ -595,7 +595,8 @@ public static partial class TextFilter
 		while (i < content.Length)
 		{
 			char first = content[i];
-			bool isRange = i + 2 < content.Length && content[i + 1] == '-' && !(i == 0 && first == ']');
+			// A leading "]" can start a range too: "[]-a]" is "]".."a", as in POSIX.
+			bool isRange = i + 2 < content.Length && content[i + 1] == '-';
 			if (!isRange)
 			{
 				members.Add(first);
