@@ -4,6 +4,7 @@ namespace TextFilter.Test;
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -89,7 +90,10 @@ public partial class ReadmeTests
 		foreach (Match row in rows)
 		{
 			string methodName = row.Groups["method"].Value;
-			MethodInfo[] overloads = [.. methods.Where(m => m.Name == methodName)];
+			// The binary-compatibility overloads are hidden from IntelliSense and deliberately carry no
+			// defaults, since defaults on both sets would make calls ambiguous. The README documents the
+			// visible overloads, so only those are held to its defaults.
+			MethodInfo[] overloads = [.. methods.Where(m => m.Name == methodName && !IsHiddenFromCallers(m))];
 			if (overloads.Length == 0)
 			{
 				problems.Add($"{methodName} does not exist");
@@ -114,6 +118,9 @@ public partial class ReadmeTests
 
 		Assert.IsEmpty(problems, string.Join("; ", problems));
 	}
+
+	private static bool IsHiddenFromCallers(MethodInfo method) =>
+		method.GetCustomAttribute<EditorBrowsableAttribute>()?.State == EditorBrowsableState.Never;
 
 	[TestMethod]
 	public void ReadmeMatchOptionsSampleGivesTheDocumentedResults()
