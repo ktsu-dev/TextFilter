@@ -436,12 +436,15 @@ public static partial class TextFilter
 	}
 
 	// DotNet.Glob is a file-path glob, so its * and ? stop at / and \. TextFilter filters arbitrary
-	// text, where a slash is an ordinary character, so both separators are swapped for a private-use
-	// character in the pattern and in the text before DotNet.Glob sees either.
-	private const char MaskedPathSeparator = '\uE000';
+	// text, where a slash is an ordinary character, so both separators are swapped for private-use
+	// characters in the pattern and in the text before DotNet.Glob sees either. Each separator gets
+	// its own character: sharing one would make them interchangeable, so "1/2" would also match
+	// "1\2", and excluding URLs with "-*/*" would hide every Windows path too.
+	private const char MaskedSlash = '\uE000';
+	private const char MaskedBackslash = '\uE001';
 
 	private static string MaskPathSeparators(string value) =>
-		value.Replace('/', MaskedPathSeparator).Replace('\\', MaskedPathSeparator);
+		value.Replace('/', MaskedSlash).Replace('\\', MaskedBackslash);
 
 	private static bool IsGlobMatch(Glob[] globs, string textToken)
 	{
@@ -452,9 +455,29 @@ public static partial class TextFilter
 	// Masking also hides the separators DotNet.Glob needs to recognise "**/" as "zero or more path
 	// segments", leaving "**" followed by a literal character. Since * already crosses the masked
 	// separator, each "**/" is expanded here instead: dropped, for the zero-segment case, or kept as
-	// "*/", for "anything ending at a separator". A token matches if any expansion does. Only a "**/"
-	// that starts the token or follows a separator is dropped, since one joined to a literal is a "*".
-	private const string MaskedGlobStarSegment = "**\uE000";
+	// "*/", for "anything ending at a separator". A token matches if any expansion does. The kept form
+	// ends at the same separator the pattern wrote, so "a/**/b" still needs a "/" before the "b". Only
+	// a "**/" that starts the token or follows a separator is dropped, since one joined to a literal is a "*".
+	private const string MaskedGlobStar = "**";
+
+	private static bool IsMaskedPathSeparator(char value) => value is MaskedSlash or MaskedBackslash;
+
+	private static int IndexOfMaskedGlobStarSegment(string maskedToken, int start)
+	{
+		int index = start;
+		while ((index = maskedToken.IndexOf(MaskedGlobStar, index, StringComparison.Ordinal)) >= 0)
+		{
+			int separator = index + MaskedGlobStar.Length;
+			if (separator < maskedToken.Length && IsMaskedPathSeparator(maskedToken[separator]))
+			{
+				return index;
+			}
+
+			index++;
+		}
+
+		return -1;
+	}
 
 	// Each "**/" doubles the expansions, so only this many are expanded both ways; any beyond it keep
 	// only the "*/" form and so need at least one segment.
@@ -467,20 +490,21 @@ public static partial class TextFilter
 		int expanded = 0;
 		int index;
 
-		while ((index = maskedToken.IndexOf(MaskedGlobStarSegment, start, StringComparison.Ordinal)) >= 0)
+		while ((index = IndexOfMaskedGlobStarSegment(maskedToken, start)) >= 0)
 		{
 			string literal = maskedToken[start..index];
+			char separator = maskedToken[index + MaskedGlobStar.Length];
 			bool expandBothWays = expanded < MaxExpandedGlobStarSegments;
 			List<string> next = new(expansions.Count * 2);
 
 			foreach (string prefix in expansions)
 			{
 				string before = prefix + literal;
-				next.Add(before + "*" + MaskedPathSeparator);
+				next.Add(before + "*" + separator);
 
 				// Only a "**" that is a whole segment can match zero segments; joined to a literal, as
 				// in "foo**/bar", it is just "*", and dropping it would splice "foo" onto "bar".
-				if (expandBothWays && (before.Length == 0 || before[^1] == MaskedPathSeparator))
+				if (expandBothWays && (before.Length == 0 || IsMaskedPathSeparator(before[^1])))
 				{
 					next.Add(before);
 				}
@@ -488,7 +512,7 @@ public static partial class TextFilter
 
 			expansions = next;
 			expanded++;
-			start = index + MaskedGlobStarSegment.Length;
+			start = index + MaskedGlobStar.Length + 1;
 		}
 
 		string tail = maskedToken[start..];
