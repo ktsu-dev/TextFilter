@@ -1206,6 +1206,47 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("   ", @"\s")]
+	[DataRow("   ", @"^\s*$")]
+	[DataRow("   ", @"\s+")]
+	[DataRow("", "^$")]
+	[DataRow("", @"^\s*$")]
+	[DataRow(" \t ", @"^\s*$")]
+	public void RegexByWordAnyMatchesBlankTextWithAPatternForBlankText(string text, string pattern)
+	{
+		// Blank text splits into no words, and the no-words guard used to return before the whole-text
+		// attempt, so a filter written to find blank entries missed exactly those under the default.
+		Assert.IsTrue(TextFilter.IsMatch(text, pattern, TextFilterType.Regex), $"'{pattern}' should match '{text}' under ByWordAny.");
+		Assert.IsTrue(TextFilter.IsMatch(text, pattern, TextFilterType.Regex, TextFilterMatchOptions.ByWholeString), $"'{pattern}' should match '{text}' under ByWholeString.");
+	}
+
+	[TestMethod]
+	[DataRow("   ", @"\s")]
+	[DataRow("", "^$")]
+	[DataRow("   ", @"^\s*$")]
+	public void RegexByWordAllStillMatchesNoBlankText(string text, string pattern)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, pattern, TextFilterType.Regex, TextFilterMatchOptions.ByWordAll));
+	}
+
+	[TestMethod]
+	[DataRow("")]
+	[DataRow("   ")]
+	public void RegexByWordAnyDoesNotMatchBlankTextWithAPatternThatNeedsAWord(string text)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, "zzz", TextFilterType.Regex));
+		Assert.IsFalse(TextFilter.IsMatch(text, @"\w", TextFilterType.Regex));
+	}
+
+	[TestMethod]
+	public void RegexByWordAnyFilterKeepsTheBlankEntries()
+	{
+		CollectionAssert.AreEqual(
+			new List<string> { "", "   " },
+			TextFilter.Filter(["", "hello", "   ", "a b"], @"^\s*$", TextFilterType.Regex).ToList());
+	}
+
+	[TestMethod]
 	public void RegexByWordAllFilterDropsBlankEntries()
 	{
 		CollectionAssert.AreEqual(
