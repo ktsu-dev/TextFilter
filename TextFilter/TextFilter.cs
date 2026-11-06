@@ -729,20 +729,22 @@ public static partial class TextFilter
 		// Swapped for RegexMatchNothing if the pattern times out partway through
 		Regex activeRegex = regex;
 
+		// No single word contains whitespace, so a pattern like "hello world" or "o\sw" can only ever
+		// match the whole text. Under ByWordAny, try that first; the per-word pass below still runs,
+		// so a word-anchored pattern like "^world" keeps matching "hello world". It comes before the
+		// no-words check below because blank text has no words at all, so a pattern written to find
+		// blank entries, such as "^\s*$" or "\s", can only ever match the whole text.
+		if (textFilterMatchOptions is TextFilterMatchOptions.ByWordAny && IsMatchWithinTimeout(ref activeRegex, cacheKey, text))
+		{
+			return true;
+		}
+
 		// Text with no words -- "" or "   " split by word -- has nothing for the pattern to match.
 		// Without this, Enumerable.All over the empty set is vacuously true, so under ByWordAll blank
 		// text matched every pattern while the glob path reported no match for the same input.
 		if (textTokens.Count == 0)
 		{
 			return false;
-		}
-
-		// No single word contains whitespace, so a pattern like "hello world" or "o\sw" can only ever
-		// match the whole text. Under ByWordAny, try that first; the per-word pass below still runs,
-		// so a word-anchored pattern like "^world" keeps matching "hello world".
-		if (textFilterMatchOptions is TextFilterMatchOptions.ByWordAny && IsMatchWithinTimeout(ref activeRegex, cacheKey, text))
-		{
-			return true;
 		}
 
 		Func<IEnumerable<string>, Func<string, bool>, bool> matchFunc = textFilterMatchOptions is TextFilterMatchOptions.ByWordAny
