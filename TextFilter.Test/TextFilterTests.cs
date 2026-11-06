@@ -1314,6 +1314,44 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("src/", "src/**")]
+	[DataRow("src/a.cs", "src/**")]
+	[DataRow("src/lib/b.cs", "src/**")]
+	[DataRow("a/b/", "a/**/b/**")]
+	[DataRow("/", "/**")]
+	[DataRow("-b/", "*/**")]
+	[DataRow("-/", "?/**")]
+	[DataRow("b-/", "b-/**")]
+	[DataRow(@"src\", @"src\**")]
+	public void TrailingGlobStarSegmentMatchesTheEmptyRemainder(string text, string filter)
+	{
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsTrue(TextFilter.IsMatch(text, filter));
+	}
+
+	[TestMethod]
+	[DataRow("src", "src/**")]
+	[DataRow("docs/a.cs", "src/**")]
+	[DataRow("foo", "foo**")]
+	public void TrailingGlobStarSegmentStillNeedsItsDirectory(string text, string filter)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	public void TrailingGlobStarSegmentFiltersLikeASingleStar()
+	{
+		string[] items = ["src/", "src/a.cs", "src/lib/b.cs", "build/", "build/out.dll", "readme.md"];
+
+		List<string> included = ["src/", "src/a.cs", "src/lib/b.cs"];
+		List<string> excluded = ["src/", "src/a.cs", "src/lib/b.cs", "readme.md"];
+
+		CollectionAssert.AreEqual(included, TextFilter.Filter(items, "src/**").ToList());
+		CollectionAssert.AreEqual(TextFilter.Filter(items, "src/*").ToList(), TextFilter.Filter(items, "src/**").ToList());
+		CollectionAssert.AreEqual(excluded, TextFilter.Filter(items, "-build/**").ToList());
+	}
+
+	[TestMethod]
 	public void GlobStarSlashMatchesCaseInsensitively()
 	{
 		Assert.IsTrue(TextFilter.IsMatch("Docs/README.md", "**/readme.md", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
