@@ -1031,13 +1031,71 @@ public class TextFilterTests
 	[DataRow("x[a^]", "x[a^]")]
 	[DataRow("x[^a", "x[^a")]
 	public void ExpandGlobClassesRewritesOnlyClassesDotNetGlobMisreads(string token, string expected) =>
-		Assert.AreEqual(expected, TextFilter.ExpandGlobClasses(token));
+		CollectionAssert.AreEqual(new[] { expected }, TextFilter.ExpandGlobClasses(token)?.ToArray());
 
 	[TestMethod]
 	[DataRow("[#-!]")]
-	[DataRow("[\u0001-\uffff_]")]
 	public void ExpandGlobClassesRejectsClassesThatCannotBeListed(string token) =>
 		Assert.IsNull(TextFilter.ExpandGlobClasses(token));
+
+	[TestMethod]
+	[DataRow("[가-힣a-z]*", new[] { "[가-힣]*", "[a-z]*" })]
+	[DataRow("x[一-龥0-9_]", new[] { "x[一-龥]", "x[0-9]", "x[_]" })]
+	[DataRow("[가-힣a-z][一-龥0-9]", new[] { "[가-힣][一-龥]", "[가-힣][0-9]", "[a-z][一-龥]", "[a-z][0-9]" })]
+	[DataRow("[가-힣z-a]", new[] { "[가-힣]" })]
+	public void ExpandGlobClassesSplitsAClassTooLargeToListIntoItsRanges(string token, string[] expected) =>
+		CollectionAssert.AreEqual(expected, TextFilter.ExpandGlobClasses(token)?.ToArray());
+
+	[TestMethod]
+	[DataRow("[\u0001-\uffff_]")]
+	[DataRow("[!가-힣a-z]")]
+	[DataRow("[A-힣]")]
+	public void ExpandGlobClassesListsAClassTooLargeToListThatCannotBeSplit(string token)
+	{
+		IReadOnlyList<string>? expanded = TextFilter.ExpandGlobClasses(token);
+		Assert.IsNotNull(expanded);
+		Assert.HasCount(1, expanded);
+		Assert.IsGreaterThan(4096, expanded[0].Length);
+	}
+
+	[TestMethod]
+	[DataRow("README.md", "[가-힣a-z]*", false)]
+	[DataRow("README.md", "[一-龥a-z]*", false)]
+	[DataRow("README.md", "[一-龥0-9]*", false)]
+	// Matching is case-sensitive, so "README.md" is not among the members and is not excluded.
+	[DataRow("README.md", "-[一-龥a-z]*", true)]
+	[DataRow("README.md", "-[一-龥A-Z]*", false)]
+	[DataRow("@", "[A-힣]", false)]
+	[DataRow("readme.md", "[가-힣a-z]*", true)]
+	[DataRow("한국.md", "[가-힣a-z]*", true)]
+	[DataRow("中文", "[一-龥a-z]*", true)]
+	[DataRow("7z", "[一-龥0-9]*", true)]
+	[DataRow("readme.md", "-[一-龥a-z]*", false)]
+	[DataRow("中文", "-[一-龥a-z]*", false)]
+	[DataRow("README.md", "+[가-힣a-z]*", false)]
+	[DataRow("한국", "+[가-힣a-z]*", true)]
+	[DataRow("A", "[A-힣]", true)]
+	[DataRow("힣", "[A-힣]", true)]
+	[DataRow("a\\b", "a[A-힣]b", true)]
+	[DataRow("README.md", "[!가-힣a-z]*", true)]
+	[DataRow("readme.md", "[!가-힣a-z]*", false)]
+	[DataRow("한국", "[!가-힣a-z]*", false)]
+	[DataRow("x_", "x[가-힣a-z_]", true)]
+	[DataRow("x-", "x[가-힣a-z_]", false)]
+	public void GlobClassTooLargeToListMatchesOnlyItsMembers(string text, string filter, bool expected) =>
+		Assert.AreEqual(expected, TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+
+	[TestMethod]
+	public void GlobClassTooLargeToListStillLeavesAHalfTypedTokenIgnored()
+	{
+		string[] items = ["README.md", "한국.md"];
+		string[] korean = ["한국.md"];
+		string[] readme = ["README.md"];
+		CollectionAssert.AreEqual(korean, TextFilter.Filter(items, "[가-힣a-z]*", TextFilterType.Glob).ToArray());
+		CollectionAssert.AreEqual(readme, TextFilter.Filter(items, "-[가-힣a-z]*", TextFilterType.Glob).ToArray());
+		CollectionAssert.AreEqual(items, TextFilter.Filter(items, "file[0-", TextFilterType.Glob).ToArray());
+		CollectionAssert.AreEqual(korean, TextFilter.Filter(items, "[가-힣a-z]* file[0-", TextFilterType.Glob).ToArray());
+	}
 
 	[TestMethod]
 	[DataRow("[0-9a-f]", "0 5 9 a c f", "g G - x _")]
@@ -1144,7 +1202,7 @@ public class TextFilterTests
 	[DataRow("[]]]", "[]][]]")]
 	[DataRow("*[[][0-9]]", "*[[][0-9][]]")]
 	public void ExpandGlobClassesWritesALiteralBracketAfterAClassAsItsOwnClass(string token, string expected) =>
-		Assert.AreEqual(expected, TextFilter.ExpandGlobClasses(token));
+		CollectionAssert.AreEqual(new[] { expected }, TextFilter.ExpandGlobClasses(token)?.ToArray());
 
 	[TestMethod]
 	[DataRow("*[[][0-9]]", "items[3]", "items[3")]
