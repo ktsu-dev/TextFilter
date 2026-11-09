@@ -1587,4 +1587,64 @@ public class TextFilterTests
 		Assert.HasCount(1, TextFilter.Filter(["Hello", "hello"], "Hello", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString).ToList());
 		Assert.HasCount(1, TextFilter.Filter([(1, "Hello"), (2, "hello")], t => t.Item2, "Hello", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString).ToList());
 	}
+
+	// "Café menu.pdf" with the é precomposed (NFC, as a keyboard types it) and decomposed into e plus
+	// a combining acute accent (NFD, as macOS stores file names).
+	private const string CafeNfc = "Caf\u00E9 menu.pdf";
+	private const string CafeNfd = "Cafe\u0301 menu.pdf";
+
+	[TestMethod]
+	[DataRow(CafeNfd, "Caf\u00E9*")]
+	[DataRow(CafeNfd, "*\u00E9*")]
+	[DataRow(CafeNfd, "Caf[\u00E9\u00E8]*")]
+	[DataRow(CafeNfd, "Caf?*")]
+	[DataRow(CafeNfc, "Cafe\u0301*")]
+	[DataRow(CafeNfc, "*e\u0301*")]
+	[DataRow(CafeNfc, "Caf[e\u0301e\u0300]*")]
+	public void GlobMatchesTextInTheOtherUnicodeNormalForm(string text, string filter)
+	{
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString, TextFilterCaseSensitivity.CaseInsensitive));
+		Assert.IsTrue(TextFilter.IsMatch(text, filter));
+	}
+
+	[TestMethod]
+	[DataRow(CafeNfd, "Caf\u00E9", TextFilterCaseSensitivity.CaseSensitive)]
+	[DataRow(CafeNfd, "caf\u00E9", TextFilterCaseSensitivity.CaseInsensitive)]
+	[DataRow(CafeNfc, "Cafe\u0301", TextFilterCaseSensitivity.CaseSensitive)]
+	[DataRow(CafeNfc, "CAFE\u0301", TextFilterCaseSensitivity.CaseInsensitive)]
+	[DataRow(CafeNfd, "^Caf[\u00E9\u00E8] menu", TextFilterCaseSensitivity.CaseSensitive)]
+	public void RegexMatchesTextInTheOtherUnicodeNormalForm(string text, string filter, TextFilterCaseSensitivity caseSensitivity)
+	{
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Regex, TextFilterMatchOptions.ByWordAny, caseSensitivity));
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Regex, TextFilterMatchOptions.ByWholeString, caseSensitivity));
+	}
+
+	[TestMethod]
+	public void GlobFilterOverMixedNormalFormsReturnsWhatFuzzyReturns()
+	{
+		string[] items = [CafeNfc, CafeNfd];
+
+		CollectionAssert.AreEqual(items, TextFilter.Filter(items, "Caf\u00E9", TextFilterType.Fuzzy).ToArray());
+		CollectionAssert.AreEqual(items, TextFilter.Filter(items, "Caf\u00E9*").ToArray());
+		CollectionAssert.AreEqual(items, TextFilter.Filter(items, "Caf\u00E9", TextFilterType.Regex).ToArray());
+	}
+
+	[TestMethod]
+	public void NormalizationReturnsNfcTextAsIs()
+	{
+		const string ascii = "readme.md";
+		Assert.AreSame(ascii, TextFilter.ToNormalizationFormC(ascii));
+		Assert.AreSame(CafeNfc, TextFilter.ToNormalizationFormC(CafeNfc));
+		Assert.AreEqual(CafeNfc, TextFilter.ToNormalizationFormC(CafeNfd));
+	}
+
+	[TestMethod]
+	public void TextThatCannotBeNormalizedIsStillMatched()
+	{
+		const string loneSurrogate = "a\uD800b";
+		Assert.AreSame(loneSurrogate, TextFilter.ToNormalizationFormC(loneSurrogate));
+		Assert.IsTrue(TextFilter.IsMatch(loneSurrogate, "a*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsTrue(TextFilter.IsMatch(loneSurrogate, "^a", TextFilterType.Regex));
+	}
 }

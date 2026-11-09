@@ -443,9 +443,27 @@ public static partial class TextFilter
 	private static string MaskPathSeparators(string value) =>
 		value.Replace('/', MaskedPathSeparator).Replace('\\', MaskedPathSeparator);
 
+	// Fuzzy matching goes through ktsu.FuzzySearch, which compares in Unicode normal form C, so an
+	// accented letter typed precomposed finds the same letter stored as base letter plus combining
+	// mark, as macOS file names are. Glob and regex compare raw strings, so both sides are brought to
+	// NFC here too; otherwise switching the filter type changes which items exist. Text that is
+	// already NFC, the common case, is returned as is. A string that cannot be normalized, such as one
+	// holding a lone surrogate, is matched as it is rather than thrown at the caller.
+	internal static string ToNormalizationFormC(string value)
+	{
+		try
+		{
+			return value.IsNormalized(NormalizationForm.FormC) ? value : value.Normalize(NormalizationForm.FormC);
+		}
+		catch (ArgumentException)
+		{
+			return value;
+		}
+	}
+
 	private static bool IsGlobMatch(Glob[] globs, string textToken)
 	{
-		string maskedText = MaskPathSeparators(textToken);
+		string maskedText = MaskPathSeparators(ToNormalizationFormC(textToken));
 		return globs.Any(glob => glob.IsMatch(maskedText));
 	}
 
@@ -657,6 +675,8 @@ public static partial class TextFilter
 	// Returns null for a token that cannot be parsed, so each caller can decide what ignoring it means.
 	private static Glob[]? ResolveGlob(string filterToken, TextFilterCaseSensitivity caseSensitivity)
 	{
+		// Normalized before the cache key is taken, so the NFC and NFD spellings of one filter share an entry.
+		filterToken = ToNormalizationFormC(filterToken);
 		string cacheKey = CacheKey(filterToken, caseSensitivity);
 
 		if (!GlobCache.TryGetValue(cacheKey, out Glob[]? globs))
@@ -716,6 +736,9 @@ public static partial class TextFilter
 	{
 		Ensure.NotNull(text);
 		Ensure.NotNull(filter);
+
+		text = ToNormalizationFormC(text);
+		filter = ToNormalizationFormC(filter);
 
 		// check if regex is valid
 		HashSet<string> textTokens = ExtractTextTokens(text, textFilterMatchOptions);
