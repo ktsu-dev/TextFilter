@@ -420,7 +420,7 @@ public class TextFilterTests
 	public void GetHintReturnsCorrectHintForGlob()
 	{
 		string result = TextFilter.GetHint(TextFilterType.Glob);
-		Assert.AreEqual("glob pattern, 'optional1* opti?nal2 +required -excluded' etc, text must contain one of the optional tokens, all of the required tokens, and none of the excluded tokens", result);
+		Assert.AreEqual("glob pattern, 'optional1* opti?nal2 +required -excluded' etc, text must contain one of the optional tokens, all of the required tokens, and none of the excluded tokens; a token starting with + is required, and one starting with -, ! or ^ is excluded; put \\ before a leading +, -, ! or ^ to match it literally, as in \\+page.svelte", result);
 	}
 
 	[TestMethod]
@@ -1586,5 +1586,57 @@ public class TextFilterTests
 		Assert.IsTrue(TextFilter.AllTokensMatchGlobFilter("hel*", ["Hello"], TextFilterCaseSensitivity.CaseInsensitive));
 		Assert.HasCount(1, TextFilter.Filter(["Hello", "hello"], "Hello", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString).ToList());
 		Assert.HasCount(1, TextFilter.Filter([(1, "Hello"), (2, "hello")], t => t.Item2, "Hello", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString).ToList());
+	}
+
+	private static readonly string[] PrefixedItems = ["+page.svelte", "-draft.md", "!important.txt", "^notes.md", "readme.md"];
+
+	[TestMethod]
+	[DataRow(@"\+page.svelte", "+page.svelte")]
+	[DataRow(@"\-draft.md", "-draft.md")]
+	[DataRow(@"\!important.txt", "!important.txt")]
+	[DataRow(@"\^notes.md", "^notes.md")]
+	[DataRow(@"\+page*", "+page.svelte")]
+	[DataRow(@"[+]page.svelte", "+page.svelte")]
+	public void EscapedLeadingPrefixMatchesItLiterally(string filter, string expected)
+	{
+		CollectionAssert.AreEqual(new[] { expected }, TextFilter.Filter(PrefixedItems, filter).ToArray());
+		Assert.IsTrue(TextFilter.IsMatch(expected, filter));
+	}
+
+	[TestMethod]
+	[DataRow(@"+\+page*", "+page.svelte")]
+	[DataRow(@"+\!important*", "!important.txt")]
+	public void EscapedPrefixAfterRequiredPrefixIsARequiredLiteral(string filter, string expected)
+	{
+		CollectionAssert.AreEqual(new[] { expected }, TextFilter.Filter(PrefixedItems, filter).ToArray());
+	}
+
+	[TestMethod]
+	[DataRow(@"-\-draft*", "-draft.md")]
+	[DataRow(@"!\^notes*", "^notes.md")]
+	public void EscapedPrefixAfterExcludedPrefixIsAnExcludedLiteral(string filter, string excluded)
+	{
+		CollectionAssert.AreEqual(PrefixedItems.Where(item => item != excluded).ToArray(), TextFilter.Filter(PrefixedItems, filter).ToArray());
+	}
+
+	[TestMethod]
+	public void UnescapedPrefixesStillMeanRequiredAndExcluded()
+	{
+		string[] onlyReadme = [.. PrefixedItems.Where(item => item == "readme.md")];
+		string[] allButPage = [.. PrefixedItems.Where(item => item != "+page.svelte")];
+		string[] allButReadme = [.. PrefixedItems.Where(item => item != "readme.md")];
+
+		CollectionAssert.AreEqual(onlyReadme, TextFilter.Filter(PrefixedItems, "+readme*").ToArray());
+		CollectionAssert.AreEqual(allButPage, TextFilter.Filter(PrefixedItems, "-+*").ToArray());
+		CollectionAssert.AreEqual(allButReadme, TextFilter.Filter(PrefixedItems, "!readme*").ToArray());
+		CollectionAssert.AreEqual(allButReadme, TextFilter.Filter(PrefixedItems, "^readme*").ToArray());
+	}
+
+	[TestMethod]
+	public void BackslashBeforeAnOrdinaryCharacterIsStillAPathSeparator()
+	{
+		Assert.IsTrue(TextFilter.IsMatch(@"src\main.cs", @"src\main.cs", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsTrue(TextFilter.IsMatch("src/main.cs", @"src\main.cs", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsTrue(TextFilter.IsMatch(@"\server", @"\server", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
 	}
 }

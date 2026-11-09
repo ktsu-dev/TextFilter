@@ -140,6 +140,31 @@ case pair, and a culture-sensitive fold would stop a filter of `img` matching `I
 machine whose locale happens to be `tr-TR`. A filter pattern is machine text rather than prose, so
 it folds the same way everywhere.
 
+### Glob Tokens
+
+A glob filter is split on whitespace into tokens, and the first character of each token says what
+kind it is:
+
+| Token | Kind | The text must |
+|-------|------|---------------|
+| `word*` | optional | contain a word matching at least one optional token (all of them under `ByWordAll`) |
+| `+word*` | required | contain a word matching every required token |
+| `-word*`, `!word*` or `^word*` | excluded | contain no word matching any excluded token |
+
+To match a word that itself starts with `+`, `-`, `!` or `^`, put a backslash before that character.
+`\+page.svelte` is the optional token `+page.svelte`, and `+\+page*` is the required token `+page*`.
+A one-character class works too: `[+]page.svelte`.
+
+```csharp
+using ktsu.TextFilter;
+
+string[] files = ["+page.svelte", "+layout.svelte", "!important.txt", "readme.md"];
+
+IEnumerable<string> page = TextFilter.Filter(files, @"\+page.svelte");          // +page.svelte
+IEnumerable<string> important = TextFilter.Filter(files, @"\!important.txt");   // !important.txt
+IEnumerable<string> notPages = TextFilter.Filter(files, "-+*");                 // !important.txt, readme.md
+```
+
 ### Filter Types
 
 TextFilter supports different filter types:

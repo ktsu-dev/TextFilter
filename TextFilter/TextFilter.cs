@@ -146,7 +146,7 @@ public static partial class TextFilter
 	{
 		return filterType switch
 		{
-			TextFilterType.Glob => "glob pattern, 'optional1* opti?nal2 +required -excluded' etc, text must contain one of the optional tokens, all of the required tokens, and none of the excluded tokens",
+			TextFilterType.Glob => "glob pattern, 'optional1* opti?nal2 +required -excluded' etc, text must contain one of the optional tokens, all of the required tokens, and none of the excluded tokens; a token starting with + is required, and one starting with -, ! or ^ is excluded; put \\ before a leading +, -, ! or ^ to match it literally, as in \\+page.svelte",
 			TextFilterType.Regex => "regex pattern, text must match the regex pattern",
 			TextFilterType.Fuzzy => "fuzzy pattern, text is ranked by how well it matches the pattern",
 			_ => throw new NotImplementedException($"{nameof(TextFilterType)}.{filterType} has not been implemented"),
@@ -313,12 +313,24 @@ public static partial class TextFilter
 			return new
 			{
 				g.Key,
-				Value = (removePrefix ? g.Select(t => t[1..]) : g).Where(t => !string.IsNullOrEmpty(t)).ToHashSet(),
+				Value = (removePrefix ? g.Select(t => t[1..]) : g).Select(UnescapeLeadingPrefix).Where(t => !string.IsNullOrEmpty(t)).ToHashSet(),
 			};
 		})
 		.Where(g => g.Value.Count != 0)
 		.ToDictionary(g => g.Key, g => g.Value);
 	}
+
+	// A token that starts with a prefix character is always read as a prefixed token, so without an
+	// escape an item named "+page.svelte" or "!important.txt" could not be found by typing its name. A
+	// backslash before a leading prefix character makes that character literal: "\+page.svelte" is the
+	// optional token "+page.svelte", and "+\+page" is the required token "+page". A backslash anywhere
+	// else is still a path separator.
+	private static string UnescapeLeadingPrefix(string token) =>
+		token.Length >= 2 && token[0] == GlobPrefixEscape && IsTokenPrefix(token[1]) ? token[1..] : token;
+
+	private const char GlobPrefixEscape = '\\';
+
+	private static bool IsTokenPrefix(char c) => ExcludedTokenPrefixes.Contains(c) || RequiredTokenPrefixes.Contains(c);
 
 	/// <summary>
 	/// Determines whether the specified text matches the glob filter pattern.
