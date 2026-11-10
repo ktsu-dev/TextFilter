@@ -495,6 +495,59 @@ public static partial class TextFilter
 		return [.. expansions.Select(prefix => prefix + tail).Distinct(StringComparer.Ordinal)];
 	}
 
+	// DotNet.Glob only reads "**" as a wildcard when it is a whole path segment; joined to anything
+	// else, as in "**foo" or "a**b", it matches no characters at all, so a doubled star
+	// would empty the list where "*" matches. Outside a whole segment a run of stars means no more than
+	// one star does, so each such run is collapsed to "*". A whole-segment "**" ("**/x", "a/**") is left
+	// for ExpandGlobStarSegments, and stars inside a bracket class are members, so they are left too.
+	internal static string CollapseJoinedGlobStars(string token)
+	{
+		if (!token.Contains("**", StringComparison.Ordinal))
+		{
+			return token;
+		}
+
+		StringBuilder result = new(token.Length);
+		int index = 0;
+		while (index < token.Length)
+		{
+			char current = token[index];
+			if (current == '[')
+			{
+				int close = FindGlobClassEnd(token, index, out _, out _);
+				if (close >= 0)
+				{
+					result.Append(token, index, close + 1 - index);
+					index = close + 1;
+					continue;
+				}
+			}
+
+			if (current != '*')
+			{
+				result.Append(current);
+				index++;
+				continue;
+			}
+
+			int runEnd = index;
+			while (runEnd < token.Length && token[runEnd] == '*')
+			{
+				runEnd++;
+			}
+
+			bool startsSegment = index == 0 || IsPathSeparator(token[index - 1]);
+			bool endsSegment = runEnd == token.Length || IsPathSeparator(token[runEnd]);
+			int runLength = runEnd - index;
+			result.Append('*', runLength > 1 && !(startsSegment && endsSegment) ? 1 : runLength);
+			index = runEnd;
+		}
+
+		return result.ToString();
+	}
+
+	private static bool IsPathSeparator(char value) => value is '/' or '\\';
+
 	// DotNet.Glob reads a bracket class as exactly one token: a single range when it starts "x-y" with
 	// two letters or two digits, otherwise a plain character list in which "-" is a member and no ranges
 	// are read. It never combines the two, so "[0-9a-f]" stops at the 0-9 range and misses "c", while
@@ -668,7 +721,7 @@ public static partial class TextFilter
 				// Glob.Parse throws on an empty pattern, which would mark the whole token unparseable and
 				// discard the valid expansions with it. An empty pattern could only match empty text, which
 				// never reaches the matcher, so drop it; a token with nothing left is still unparseable.
-				Glob[]? parsed = expandedToken is null ? null : [.. ExpandGlobStarSegments(MaskPathSeparators(expandedToken))
+				Glob[]? parsed = expandedToken is null ? null : [.. ExpandGlobStarSegments(MaskPathSeparators(CollapseJoinedGlobStars(expandedToken)))
 					.Where(pattern => pattern.Length != 0)
 					.Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
 						? Glob.Parse(pattern, CaseInsensitiveGlobOptions)
