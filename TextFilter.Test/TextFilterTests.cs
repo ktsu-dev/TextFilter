@@ -1304,6 +1304,36 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("x*", "x[!/**/]")]
+	[DataRow("x*", "x[!a/**/]")]
+	[DataRow("x*", "x[^/**/]")]
+	[DataRow("xa", "x[!a/**/]")]
+	public void GlobStarInsideNegatedClassStaysExcluded(string text, string filter)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	[DataRow("xb", "x[!a/**/]")]
+	[DataRow("x*", "x[a/**/]")]
+	[DataRow("x/", "x[a/**/]")]
+	[DataRow("a/x/b", "[a]/**/b")]
+	[DataRow("a/b", "[a]/**/b")]
+	public void GlobStarInsideClassDoesNotDisturbOtherMatches(string text, string filter)
+	{
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	public void GlobStarInsideNegatedClassExclusionKeepsExcludedItems()
+	{
+		List<string> result = [.. TextFilter.Filter(["x*", "xb"], "-x[!/**/]")];
+
+		Assert.AreEqual(1, result.Count);
+		Assert.AreEqual("x*", result[0]);
+	}
+
+	[TestMethod]
 	public void GlobStarSlashFiltersPathItems()
 	{
 		List<string> result = [.. TextFilter.Filter(["src/a.cs", "src/x/a.cs", "docs/readme.md"], "src/**/*.cs", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString)];

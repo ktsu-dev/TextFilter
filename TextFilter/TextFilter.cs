@@ -463,12 +463,24 @@ public static partial class TextFilter
 	internal static IReadOnlyList<string> ExpandGlobStarSegments(string maskedToken)
 	{
 		List<string> expansions = [string.Empty];
+		List<(int Open, int Close)> classSpans = FindGlobClassSpans(maskedToken);
 		int start = 0;
+		int searchFrom = 0;
 		int expanded = 0;
 		int index;
 
-		while ((index = maskedToken.IndexOf(MaskedGlobStarSegment, start, StringComparison.Ordinal)) >= 0)
+		while ((index = maskedToken.IndexOf(MaskedGlobStarSegment, searchFrom, StringComparison.Ordinal)) >= 0)
 		{
+			// Inside a bracket class "**/" is not a globstar but the members "*" and "/". Dropping them
+			// would shrink the class, which for a negated class lets through characters it excludes, so
+			// the search resumes after the class and its contents stay literal.
+			int classClose = ClassCloseContaining(classSpans, index);
+			if (classClose >= 0)
+			{
+				searchFrom = classClose + 1;
+				continue;
+			}
+
 			string literal = maskedToken[start..index];
 			bool expandBothWays = expanded < MaxExpandedGlobStarSegments;
 			List<string> next = new(expansions.Count * 2);
@@ -489,10 +501,47 @@ public static partial class TextFilter
 			expansions = next;
 			expanded++;
 			start = index + MaskedGlobStarSegment.Length;
+			searchFrom = start;
 		}
 
 		string tail = maskedToken[start..];
 		return [.. expansions.Select(prefix => prefix + tail).Distinct(StringComparer.Ordinal)];
+	}
+
+	// The spans of the closed bracket classes in a token, read with the same boundary rules as
+	// ExpandGlobClasses: a leading "]" is a member, and "!" or "^" negate. Scanning stops at a class
+	// with no closing "]", as ExpandGlobClasses does.
+	private static List<(int Open, int Close)> FindGlobClassSpans(string token)
+	{
+		List<(int Open, int Close)> spans = [];
+		int index = 0;
+		int open;
+		while ((open = token.IndexOf('[', index)) >= 0)
+		{
+			int close = FindGlobClassEnd(token, open, out _, out _);
+			if (close < 0)
+			{
+				break;
+			}
+
+			spans.Add((open, close));
+			index = close + 1;
+		}
+
+		return spans;
+	}
+
+	private static int ClassCloseContaining(List<(int Open, int Close)> spans, int position)
+	{
+		foreach ((int open, int close) in spans)
+		{
+			if (open < position && position < close)
+			{
+				return close;
+			}
+		}
+
+		return -1;
 	}
 
 	// DotNet.Glob reads a bracket class as exactly one token: a single range when it starts "x-y" with
