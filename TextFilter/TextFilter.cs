@@ -513,9 +513,8 @@ public static partial class TextFilter
 	}
 
 	// The spans of the closed bracket classes in a token, read with the same boundary rules as
-	// ExpandGlobClasses: a leading "]" is a member, and "!" or "^" negate. A "[" with no closing "]" is
-	// a literal and scanning carries on past it, except in a token ending in a dash, where scanning
-	// stops, as ExpandGlobClasses does.
+	// ExpandGlobClasses: a leading "]" is a member, and "!" or "^" negate. Scanning stops at a class
+	// with no closing "]", as ExpandGlobClasses does.
 	private static List<(int Open, int Close)> FindGlobClassSpans(string token)
 	{
 		List<(int Open, int Close)> spans = [];
@@ -526,13 +525,7 @@ public static partial class TextFilter
 			int close = FindGlobClassEnd(token, open, out _, out _);
 			if (close < 0)
 			{
-				if (token.EndsWith('-'))
-				{
-					break;
-				}
-
-				index = open + 1;
-				continue;
+				break;
 			}
 
 			spans.Add((open, close));
