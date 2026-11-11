@@ -420,7 +420,7 @@ public class TextFilterTests
 	public void GetHintReturnsCorrectHintForGlob()
 	{
 		string result = TextFilter.GetHint(TextFilterType.Glob);
-		Assert.AreEqual("glob pattern, 'optional1* opti?nal2 +required -excluded' etc, text must contain one of the optional tokens, all of the required tokens, and none of the excluded tokens", result);
+		Assert.AreEqual("glob pattern, 'optional1* opti?nal2 +required -excluded' etc, text must contain one of the optional tokens, all of the required tokens, and none of the excluded tokens; a token starting with + is required, and one starting with -, ! or ^ is excluded; put \\ before a leading +, -, ! or ^ to match it literally, as in \\+page.svelte", result);
 	}
 
 	[TestMethod]
@@ -1392,6 +1392,51 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("xfoo", "**foo")]
+	[DataRow("foo", "**foo")]
+	[DataRow("ab", "a**b")]
+	[DataRow("axb", "a**b")]
+	[DataRow("a/b", "a**b")]
+	[DataRow("foobar", "foo**")]
+	[DataRow("xfoo", "***foo")]
+	[DataRow("src/xfoo", "src/**foo")]
+	public void GlobStarJoinedToLiteralMatchesLikeSingleStar(string text, string filter)
+	{
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	[DataRow("xbar", "**foo")]
+	[DataRow("ac", "a**b")]
+	public void GlobStarJoinedToLiteralStillRequiresTheLiteral(string text, string filter)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	public void GlobStarJoinedToLiteralFiltersItems()
+	{
+		List<string> result = [.. TextFilter.Filter(["xfoo", "foo", "bar"], "**foo")];
+
+		Assert.AreEqual(2, result.Count);
+		Assert.AreEqual("xfoo", result[0]);
+		Assert.AreEqual("foo", result[1]);
+	}
+
+	[TestMethod]
+	[DataRow("x[**]", "x[**]")]
+	[DataRow("x[!**]", "x[!**]")]
+	[DataRow("**/a", "**/a")]
+	[DataRow("a/**", "a/**")]
+	[DataRow("**", "**")]
+	[DataRow("a**b", "a*b")]
+	[DataRow("foo**/bar", "foo*/bar")]
+	public void CollapseJoinedGlobStarsLeavesWholeSegmentsAndClasses(string token, string expected)
+	{
+		Assert.AreEqual(expected, TextFilter.CollapseJoinedGlobStars(token));
+	}
+
+	[TestMethod]
 	public void GlobStarSlashFiltersPathItems()
 	{
 		List<string> result = [.. TextFilter.Filter(["src/a.cs", "src/x/a.cs", "docs/readme.md"], "src/**/*.cs", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString)];
@@ -1734,5 +1779,57 @@ public class TextFilterTests
 		Assert.AreSame(loneSurrogate, TextFilter.ToNormalizationFormC(loneSurrogate));
 		Assert.IsTrue(TextFilter.IsMatch(loneSurrogate, "a*", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
 		Assert.IsTrue(TextFilter.IsMatch(loneSurrogate, "^a", TextFilterType.Regex));
+	}
+
+	private static readonly string[] PrefixedItems = ["+page.svelte", "-draft.md", "!important.txt", "^notes.md", "readme.md"];
+
+	[TestMethod]
+	[DataRow(@"\+page.svelte", "+page.svelte")]
+	[DataRow(@"\-draft.md", "-draft.md")]
+	[DataRow(@"\!important.txt", "!important.txt")]
+	[DataRow(@"\^notes.md", "^notes.md")]
+	[DataRow(@"\+page*", "+page.svelte")]
+	[DataRow(@"[+]page.svelte", "+page.svelte")]
+	public void EscapedLeadingPrefixMatchesItLiterally(string filter, string expected)
+	{
+		CollectionAssert.AreEqual(new[] { expected }, TextFilter.Filter(PrefixedItems, filter).ToArray());
+		Assert.IsTrue(TextFilter.IsMatch(expected, filter));
+	}
+
+	[TestMethod]
+	[DataRow(@"+\+page*", "+page.svelte")]
+	[DataRow(@"+\!important*", "!important.txt")]
+	public void EscapedPrefixAfterRequiredPrefixIsARequiredLiteral(string filter, string expected)
+	{
+		CollectionAssert.AreEqual(new[] { expected }, TextFilter.Filter(PrefixedItems, filter).ToArray());
+	}
+
+	[TestMethod]
+	[DataRow(@"-\-draft*", "-draft.md")]
+	[DataRow(@"!\^notes*", "^notes.md")]
+	public void EscapedPrefixAfterExcludedPrefixIsAnExcludedLiteral(string filter, string excluded)
+	{
+		CollectionAssert.AreEqual(PrefixedItems.Where(item => item != excluded).ToArray(), TextFilter.Filter(PrefixedItems, filter).ToArray());
+	}
+
+	[TestMethod]
+	public void UnescapedPrefixesStillMeanRequiredAndExcluded()
+	{
+		string[] onlyReadme = [.. PrefixedItems.Where(item => item == "readme.md")];
+		string[] allButPage = [.. PrefixedItems.Where(item => item != "+page.svelte")];
+		string[] allButReadme = [.. PrefixedItems.Where(item => item != "readme.md")];
+
+		CollectionAssert.AreEqual(onlyReadme, TextFilter.Filter(PrefixedItems, "+readme*").ToArray());
+		CollectionAssert.AreEqual(allButPage, TextFilter.Filter(PrefixedItems, "-+*").ToArray());
+		CollectionAssert.AreEqual(allButReadme, TextFilter.Filter(PrefixedItems, "!readme*").ToArray());
+		CollectionAssert.AreEqual(allButReadme, TextFilter.Filter(PrefixedItems, "^readme*").ToArray());
+	}
+
+	[TestMethod]
+	public void BackslashBeforeAnOrdinaryCharacterIsStillAPathSeparator()
+	{
+		Assert.IsTrue(TextFilter.IsMatch(@"src\main.cs", @"src\main.cs", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsTrue(TextFilter.IsMatch("src/main.cs", @"src\main.cs", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsTrue(TextFilter.IsMatch(@"\server", @"\server", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
 	}
 }

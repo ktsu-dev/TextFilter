@@ -146,7 +146,7 @@ public static partial class TextFilter
 	{
 		return filterType switch
 		{
-			TextFilterType.Glob => "glob pattern, 'optional1* opti?nal2 +required -excluded' etc, text must contain one of the optional tokens, all of the required tokens, and none of the excluded tokens",
+			TextFilterType.Glob => "glob pattern, 'optional1* opti?nal2 +required -excluded' etc, text must contain one of the optional tokens, all of the required tokens, and none of the excluded tokens; a token starting with + is required, and one starting with -, ! or ^ is excluded; put \\ before a leading +, -, ! or ^ to match it literally, as in \\+page.svelte",
 			TextFilterType.Regex => "regex pattern, text must match the regex pattern",
 			TextFilterType.Fuzzy => "fuzzy pattern, text is ranked by how well it matches the pattern",
 			_ => throw new NotImplementedException($"{nameof(TextFilterType)}.{filterType} has not been implemented"),
@@ -313,12 +313,24 @@ public static partial class TextFilter
 			return new
 			{
 				g.Key,
-				Value = (removePrefix ? g.Select(t => t[1..]) : g).Where(t => !string.IsNullOrEmpty(t)).ToHashSet(),
+				Value = (removePrefix ? g.Select(t => t[1..]) : g).Select(UnescapeLeadingPrefix).Where(t => !string.IsNullOrEmpty(t)).ToHashSet(),
 			};
 		})
 		.Where(g => g.Value.Count != 0)
 		.ToDictionary(g => g.Key, g => g.Value);
 	}
+
+	// A token that starts with a prefix character is always read as a prefixed token, so without an
+	// escape an item named "+page.svelte" or "!important.txt" could not be found by typing its name. A
+	// backslash before a leading prefix character makes that character literal: "\+page.svelte" is the
+	// optional token "+page.svelte", and "+\+page" is the required token "+page". A backslash anywhere
+	// else is still a path separator.
+	private static string UnescapeLeadingPrefix(string token) =>
+		token.Length >= 2 && token[0] == GlobPrefixEscape && IsTokenPrefix(token[1]) ? token[1..] : token;
+
+	private const char GlobPrefixEscape = '\\';
+
+	private static bool IsTokenPrefix(char c) => ExcludedTokenPrefixes.Contains(c) || RequiredTokenPrefixes.Contains(c);
 
 	/// <summary>
 	/// Determines whether the specified text matches the glob filter pattern.
@@ -525,6 +537,59 @@ public static partial class TextFilter
 		string tail = maskedToken[start..];
 		return [.. expansions.Select(prefix => prefix + tail).Distinct(StringComparer.Ordinal)];
 	}
+
+	// DotNet.Glob only reads "**" as a wildcard when it is a whole path segment; joined to anything
+	// else, as in "**foo" or "a**b", it matches no characters at all, so a doubled star
+	// would empty the list where "*" matches. Outside a whole segment a run of stars means no more than
+	// one star does, so each such run is collapsed to "*". A whole-segment "**" ("**/x", "a/**") is left
+	// for ExpandGlobStarSegments, and stars inside a bracket class are members, so they are left too.
+	internal static string CollapseJoinedGlobStars(string token)
+	{
+		if (!token.Contains("**", StringComparison.Ordinal))
+		{
+			return token;
+		}
+
+		StringBuilder result = new(token.Length);
+		int index = 0;
+		while (index < token.Length)
+		{
+			char current = token[index];
+			if (current == '[')
+			{
+				int close = FindGlobClassEnd(token, index, out _, out _);
+				if (close >= 0)
+				{
+					result.Append(token, index, close + 1 - index);
+					index = close + 1;
+					continue;
+				}
+			}
+
+			if (current != '*')
+			{
+				result.Append(current);
+				index++;
+				continue;
+			}
+
+			int runEnd = index;
+			while (runEnd < token.Length && token[runEnd] == '*')
+			{
+				runEnd++;
+			}
+
+			bool startsSegment = index == 0 || IsPathSeparator(token[index - 1]);
+			bool endsSegment = runEnd == token.Length || IsPathSeparator(token[runEnd]);
+			int runLength = runEnd - index;
+			result.Append('*', runLength > 1 && !(startsSegment && endsSegment) ? 1 : runLength);
+			index = runEnd;
+		}
+
+		return result.ToString();
+	}
+
+	private static bool IsPathSeparator(char value) => value is '/' or '\\';
 
 	// The spans of the closed bracket classes in a token, read with the same boundary rules as
 	// ExpandGlobClasses: a leading "]" is a member, and "!" or "^" negate. Scanning stops at a class
@@ -791,7 +856,7 @@ public static partial class TextFilter
 				// discard the valid expansions with it. An empty pattern could only match empty text, which
 				// never reaches the matcher, so drop it; a token with nothing left is still unparseable.
 				Glob[]? parsed = expandedTokens is null ? null : [.. expandedTokens
-					.SelectMany(expandedToken => ExpandGlobStarSegments(MaskPathSeparators(expandedToken)))
+					.SelectMany(expandedToken => ExpandGlobStarSegments(MaskPathSeparators(CollapseJoinedGlobStars(expandedToken))))
 					.Distinct(StringComparer.Ordinal)
 					.Where(pattern => pattern.Length != 0)
 					.Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive

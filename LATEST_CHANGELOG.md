@@ -2,6 +2,16 @@
 
 Changes since v1.7.13:
 
+- Keep a **/ inside a glob class as literal members [patch] (#202) (matt-edmondson)
+- Hold only the visible overloads to the README's documented defaults [patch] (#186) (matt-edmondson)
+- Split a glob class too large to list into its ranges [patch] (#196) (matt-edmondson)
+- Match a glob token made only of **/ segments [patch] (#182) (matt-edmondson)
+- Let a glob class range start at a leading ] [patch] (#180) (matt-edmondson)
+- Use the real API names in the README samples and reference [patch] (#178) (matt-edmondson)
+- Match a literal ] straight after a glob class [patch] (#177) (matt-edmondson)
+- Build filter regexes interpreted instead of compiled [patch] (#174) (matt-edmondson)
+- Require a separator after a glob ** joined to a preceding literal [patch] (#171) (matt-edmondson)
+- Restore the pre-1.7 IsMatch, Filter and DoesMatchGlob signatures for older callers [patch] (#166) (matt-edmondson)
 - Extract the class opening out of the nested ternary in ExpandGlobClasses (matt-edmondson)
 - Move the #157 tests away from the lines #158's tests add to (matt-edmondson)
 - Match a path separator inside a glob class range that spans it [patch] (matt-edmondson)
