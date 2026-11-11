@@ -1392,6 +1392,51 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("xfoo", "**foo")]
+	[DataRow("foo", "**foo")]
+	[DataRow("ab", "a**b")]
+	[DataRow("axb", "a**b")]
+	[DataRow("a/b", "a**b")]
+	[DataRow("foobar", "foo**")]
+	[DataRow("xfoo", "***foo")]
+	[DataRow("src/xfoo", "src/**foo")]
+	public void GlobStarJoinedToLiteralMatchesLikeSingleStar(string text, string filter)
+	{
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	[DataRow("xbar", "**foo")]
+	[DataRow("ac", "a**b")]
+	public void GlobStarJoinedToLiteralStillRequiresTheLiteral(string text, string filter)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	public void GlobStarJoinedToLiteralFiltersItems()
+	{
+		List<string> result = [.. TextFilter.Filter(["xfoo", "foo", "bar"], "**foo")];
+
+		Assert.AreEqual(2, result.Count);
+		Assert.AreEqual("xfoo", result[0]);
+		Assert.AreEqual("foo", result[1]);
+	}
+
+	[TestMethod]
+	[DataRow("x[**]", "x[**]")]
+	[DataRow("x[!**]", "x[!**]")]
+	[DataRow("**/a", "**/a")]
+	[DataRow("a/**", "a/**")]
+	[DataRow("**", "**")]
+	[DataRow("a**b", "a*b")]
+	[DataRow("foo**/bar", "foo*/bar")]
+	public void CollapseJoinedGlobStarsLeavesWholeSegmentsAndClasses(string token, string expected)
+	{
+		Assert.AreEqual(expected, TextFilter.CollapseJoinedGlobStars(token));
+	}
+
+	[TestMethod]
 	public void GlobStarSlashFiltersPathItems()
 	{
 		List<string> result = [.. TextFilter.Filter(["src/a.cs", "src/x/a.cs", "docs/readme.md"], "src/**/*.cs", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString)];
