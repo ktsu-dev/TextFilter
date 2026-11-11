@@ -463,12 +463,24 @@ public static partial class TextFilter
 	internal static IReadOnlyList<string> ExpandGlobStarSegments(string maskedToken)
 	{
 		List<string> expansions = [string.Empty];
+		List<(int Open, int Close)> classSpans = FindGlobClassSpans(maskedToken);
 		int start = 0;
+		int searchFrom = 0;
 		int expanded = 0;
 		int index;
 
-		while ((index = maskedToken.IndexOf(MaskedGlobStarSegment, start, StringComparison.Ordinal)) >= 0)
+		while ((index = maskedToken.IndexOf(MaskedGlobStarSegment, searchFrom, StringComparison.Ordinal)) >= 0)
 		{
+			// Inside a bracket class "**/" is not a globstar but the members "*" and "/". Dropping them
+			// would shrink the class, which for a negated class lets through characters it excludes, so
+			// the search resumes after the class and its contents stay literal.
+			int classClose = ClassCloseContaining(classSpans, index);
+			if (classClose >= 0)
+			{
+				searchFrom = classClose + 1;
+				continue;
+			}
+
 			string literal = maskedToken[start..index];
 			bool expandBothWays = expanded < MaxExpandedGlobStarSegments;
 			List<string> next = new(expansions.Count * 2);
@@ -489,10 +501,47 @@ public static partial class TextFilter
 			expansions = next;
 			expanded++;
 			start = index + MaskedGlobStarSegment.Length;
+			searchFrom = start;
 		}
 
 		string tail = maskedToken[start..];
 		return [.. expansions.Select(prefix => prefix + tail).Distinct(StringComparer.Ordinal)];
+	}
+
+	// The spans of the closed bracket classes in a token, read with the same boundary rules as
+	// ExpandGlobClasses: a leading "]" is a member, and "!" or "^" negate. Scanning stops at a class
+	// with no closing "]", as ExpandGlobClasses does.
+	private static List<(int Open, int Close)> FindGlobClassSpans(string token)
+	{
+		List<(int Open, int Close)> spans = [];
+		int index = 0;
+		int open;
+		while ((open = token.IndexOf('[', index)) >= 0)
+		{
+			int close = FindGlobClassEnd(token, open, out _, out _);
+			if (close < 0)
+			{
+				break;
+			}
+
+			spans.Add((open, close));
+			index = close + 1;
+		}
+
+		return spans;
+	}
+
+	private static int ClassCloseContaining(List<(int Open, int Close)> spans, int position)
+	{
+		foreach ((int open, int close) in spans)
+		{
+			if (open < position && position < close)
+			{
+				return close;
+			}
+		}
+
+		return -1;
 	}
 
 	// DotNet.Glob reads a bracket class as exactly one token: a single range when it starts "x-y" with
@@ -505,18 +554,26 @@ public static partial class TextFilter
 	// letter or digit range is left for DotNet.Glob to match natively, since it reads that form
 	// correctly and it may span far more characters than are worth listing. A class with no closing
 	// "]" is left alone and stays unparseable.
-	// Returns null for a class that cannot be written as a list: one whose ranges span more than
-	// MaxGlobClassMembers characters, or that has no members at all because every range is reversed.
+	// A class that would list more than MaxGlobClassMembers characters ("[가-힣a-z]") is costly to match
+	// as a list, so a class that is not negated is split instead: each letter or digit range in it is
+	// matched natively, the rest is listed, and the token becomes one alternative per piece, matching if
+	// any of them does. A negated class cannot be split that way, since it must miss every piece at once,
+	// so it is listed in full however long it is, as is a class whose split would give the token more than
+	// MaxGlobClassAlternatives alternatives.
+	// Returns the token's alternatives, or null for a class that has no members at all because every
+	// range is reversed.
 	private const int MaxGlobClassMembers = 4096;
 
-	internal static string? ExpandGlobClasses(string token)
+	private const int MaxGlobClassAlternatives = 16;
+
+	internal static IReadOnlyList<string>? ExpandGlobClasses(string token)
 	{
 		if (!token.Contains(']'))
 		{
-			return token;
+			return [token];
 		}
 
-		StringBuilder result = new(token.Length);
+		List<StringBuilder> results = [new(token.Length)];
 		int index = 0;
 		while (index < token.Length)
 		{
@@ -533,16 +590,14 @@ public static partial class TextFilter
 			}
 
 			string content = token[contentStart..close];
-			string opening = negated ? "[!" : "[";
-			string? rewritten = !content.Contains('-') || IsNativeGlobRange(content)
-				? opening + content + "]"
-				: ToGlobCharacterList(content, negated);
+			List<string>? rewritten = RewriteGlobClass(content, negated, MaxGlobClassAlternatives / results.Count);
 			if (rewritten is null)
 			{
 				return null;
 			}
 
-			result.Append(token, index, open - index).Append(rewritten);
+			string literal = token[index..open];
+			results = [.. results.SelectMany(result => rewritten.Select(piece => new StringBuilder(result.ToString()).Append(literal).Append(piece)))];
 			index = close + 1;
 
 			// DotNet.Glob reads a "]" straight after a class as one more member of it, so "[a]]" would
@@ -550,12 +605,51 @@ public static partial class TextFilter
 			// reads as the literal the pattern means.
 			while (index < token.Length && token[index] == ']')
 			{
-				result.Append("[]]");
+				results.ForEach(result => result.Append("[]]"));
 				index++;
 			}
 		}
 
-		return result.Append(token, index, token.Length - index).ToString();
+		string tail = token[index..];
+		return [.. results.Select(result => result.Append(tail).ToString())];
+	}
+
+	// Returns the pieces a class is matched as, any of which may match, at most maxPieces of them; or
+	// null if the class has no members.
+	private static List<string>? RewriteGlobClass(string content, bool negated, int maxPieces)
+	{
+		if (!content.Contains('-') || IsNativeGlobRange(content))
+		{
+			return [(negated ? "[!" : "[") + content + "]"];
+		}
+
+		List<char> singles = [];
+		List<(char First, char Last)> ranges = [];
+		ReadGlobClassMembers(content, singles, ranges);
+
+		long memberCount = singles.Count + ranges.Sum(range => Math.Max(0L, range.Last - range.First + 1L));
+		if (!negated && memberCount > MaxGlobClassMembers)
+		{
+			// A reversed range has no members, so it adds no piece.
+			List<(char First, char Last)> listedRanges = [.. ranges.Where(range => range.First <= range.Last && !IsNativeGlobRange(range.First, range.Last))];
+			List<string> pieces = [.. ranges
+				.Where(range => range.First <= range.Last && IsNativeGlobRange(range.First, range.Last))
+				.Select(range => $"[{range.First}-{range.Last}]")
+				.Distinct(StringComparer.Ordinal)];
+
+			string? rest = ToGlobCharacterList(CollectGlobClassMembers(singles, listedRanges), negated: false);
+			if (rest is not null)
+			{
+				pieces.Add(rest);
+			}
+
+			if (pieces.Count <= maxPieces)
+			{
+				return pieces;
+			}
+		}
+
+		return ToGlobCharacterList(CollectGlobClassMembers(singles, ranges), negated) is string list ? [list] : null;
 	}
 
 	// Returns the index of the "]" closing the class opened at "open", or -1 if it is never closed.
@@ -577,47 +671,55 @@ public static partial class TextFilter
 	// A range that spans "/" or "\" is listed instead, so the separator in it is masked like any other
 	// literal one; left native, it would never contain the masked separator in the text ("[A-z]").
 	private static bool IsNativeGlobRange(string content) =>
-		content.Length == 3 && content[1] == '-' && content[0] != ']'
-		&& ((char.IsLetter(content[0]) && char.IsLetter(content[2])) || (char.IsAsciiDigit(content[0]) && char.IsAsciiDigit(content[2])))
-		&& !SpansPathSeparator(content[0], content[2]);
+		content.Length == 3 && content[1] == '-' && content[0] != ']' && IsNativeGlobRange(content[0], content[2]);
+
+	private static bool IsNativeGlobRange(char first, char last) =>
+		((char.IsLetter(first) && char.IsLetter(last)) || (char.IsAsciiDigit(first) && char.IsAsciiDigit(last)))
+		&& !SpansPathSeparator(first, last);
 
 	private static bool SpansPathSeparator(char first, char last) =>
 		(first <= '/' && '/' <= last) || (first <= '\\' && '\\' <= last);
 
-	// Reads the class members with the usual glob rules (a leading "]" and a leading or trailing "-" are
-	// literal, "x-y" is an inclusive range) and writes them in an order DotNet.Glob reads as a plain list:
-	// "]" first, so it does not close the class, then "-", so no member pair looks like a range, and "!"
-	// never first, so it is not read as negation.
-	private static string? ToGlobCharacterList(string content, bool negated)
+	// Reads the class members with the usual glob rules: a leading "]" and a leading or trailing "-" are
+	// literal, and "x-y" is an inclusive range.
+	private static void ReadGlobClassMembers(string content, List<char> singles, List<(char First, char Last)> ranges)
 	{
-		SortedSet<char> members = [];
 		int i = 0;
 		while (i < content.Length)
 		{
-			char first = content[i];
 			// A leading "]" can start a range too: "[]-a]" is "]".."a", as in POSIX.
 			bool isRange = i + 2 < content.Length && content[i + 1] == '-';
 			if (!isRange)
 			{
-				members.Add(first);
+				singles.Add(content[i]);
 				i++;
 				continue;
 			}
 
-			char last = content[i + 2];
-			if (last - first + members.Count >= MaxGlobClassMembers)
-			{
-				return null;
-			}
+			ranges.Add((content[i], content[i + 2]));
+			i += 3;
+		}
+	}
 
+	private static SortedSet<char> CollectGlobClassMembers(List<char> singles, List<(char First, char Last)> ranges)
+	{
+		SortedSet<char> members = [.. singles];
+		foreach ((char first, char last) in ranges)
+		{
 			for (int member = first; member <= last; member++)
 			{
 				members.Add((char)member);
 			}
-
-			i += 3;
 		}
 
+		return members;
+	}
+
+	// Writes the members in an order DotNet.Glob reads as a plain list: "]" first, so it does not close
+	// the class, then "-", so no member pair looks like a range, and "!" never first, so it is not read
+	// as negation. Returns null if there are no members.
+	private static string? ToGlobCharacterList(SortedSet<char> members, bool negated)
+	{
 		if (members.Count == 0)
 		{
 			return null;
@@ -663,12 +765,14 @@ public static partial class TextFilter
 		{
 			try
 			{
-				string? expandedToken = ExpandGlobClasses(filterToken);
+				IReadOnlyList<string>? expandedTokens = ExpandGlobClasses(filterToken);
 				// A token made only of "**/" segments expands to the empty string as well as to "*/".
 				// Glob.Parse throws on an empty pattern, which would mark the whole token unparseable and
 				// discard the valid expansions with it. An empty pattern could only match empty text, which
 				// never reaches the matcher, so drop it; a token with nothing left is still unparseable.
-				Glob[]? parsed = expandedToken is null ? null : [.. ExpandGlobStarSegments(MaskPathSeparators(expandedToken))
+				Glob[]? parsed = expandedTokens is null ? null : [.. expandedTokens
+					.SelectMany(expandedToken => ExpandGlobStarSegments(MaskPathSeparators(expandedToken)))
+					.Distinct(StringComparer.Ordinal)
 					.Where(pattern => pattern.Length != 0)
 					.Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
 						? Glob.Parse(pattern, CaseInsensitiveGlobOptions)
