@@ -633,28 +633,32 @@ public static partial class TextFilter
 		ReadGlobClassMembers(content, singles, ranges);
 
 		long memberCount = singles.Count + ranges.Sum(range => Math.Max(0L, range.Last - range.First + 1L));
-		if (!negated && memberCount > MaxGlobClassMembers)
+		if (!negated && memberCount > MaxGlobClassMembers && SplitGlobClass(singles, ranges, maxPieces) is List<string> pieces)
 		{
-			// A reversed range has no members, so it adds no piece.
-			List<(char First, char Last)> listedRanges = [.. ranges.Where(range => range.First <= range.Last && !IsNativeGlobRange(range.First, range.Last))];
-			List<string> pieces = [.. ranges
-				.Where(range => range.First <= range.Last && IsNativeGlobRange(range.First, range.Last))
-				.Select(range => $"[{range.First}-{range.Last}]")
-				.Distinct(StringComparer.Ordinal)];
-
-			string? rest = ToGlobCharacterList(CollectGlobClassMembers(singles, listedRanges), negated: false);
-			if (rest is not null)
-			{
-				pieces.Add(rest);
-			}
-
-			if (pieces.Count <= maxPieces)
-			{
-				return pieces;
-			}
+			return pieces;
 		}
 
 		return ToGlobCharacterList(CollectGlobClassMembers(singles, ranges), negated) is string list ? [list] : null;
+	}
+
+	// Splits a large non-negated class into a piece per native range plus one listed piece for the rest,
+	// or returns null if that gives more than maxPieces pieces.
+	private static List<string>? SplitGlobClass(List<char> singles, List<(char First, char Last)> ranges, int maxPieces)
+	{
+		// A reversed range has no members, so it adds no piece.
+		List<(char First, char Last)> listedRanges = [.. ranges.Where(range => range.First <= range.Last && !IsNativeGlobRange(range.First, range.Last))];
+		List<string> pieces = [.. ranges
+			.Where(range => range.First <= range.Last && IsNativeGlobRange(range.First, range.Last))
+			.Select(range => $"[{range.First}-{range.Last}]")
+			.Distinct(StringComparer.Ordinal)];
+
+		string? rest = ToGlobCharacterList(CollectGlobClassMembers(singles, listedRanges), negated: false);
+		if (rest is not null)
+		{
+			pieces.Add(rest);
+		}
+
+		return pieces.Count <= maxPieces ? pieces : null;
 	}
 
 	// Returns the index of the "]" closing the class opened at "open", or -1 if it is never closed.
