@@ -2,6 +2,8 @@
 
 Changes since v1.7.13:
 
+- Let a backslash make a leading +, -, ! or ^ literal in a glob token [patch] (#200) (matt-edmondson)
+- Match a glob ** joined to other characters like a single * [patch] (#203) (matt-edmondson)
 - Keep a **/ inside a glob class as literal members [patch] (#202) (matt-edmondson)
 - Hold only the visible overloads to the README's documented defaults [patch] (#186) (matt-edmondson)
 - Split a glob class too large to list into its ranges [patch] (#196) (matt-edmondson)
