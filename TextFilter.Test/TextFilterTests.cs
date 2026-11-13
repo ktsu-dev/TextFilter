@@ -1362,6 +1362,15 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("a/b/c/d/x.cs", "a**/b**/c**/d**/**/x.cs")]
+	[DataRow("a/b/c/d/q/x.cs", "a**/b**/c**/d**/**/x.cs")]
+	[DataRow("a/b/c/d/e/x.cs", "a**/b**/c**/d**/e**/**/x.cs")]
+	public void GlobStarJoinedToLiteralDoesNotUseUpTheZeroSegmentCap(string text, string filter)
+	{
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
 	[DataRow("x*", "x[!/**/]")]
 	[DataRow("x*", "x[!a/**/]")]
 	[DataRow("x*", "x[^/**/]")]
