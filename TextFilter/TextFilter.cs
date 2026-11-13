@@ -117,6 +117,10 @@ public static partial class TextFilter
 	private static string CacheKey(string pattern, TextFilterCaseSensitivity caseSensitivity) =>
 		caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive ? "i:" + pattern : "s:" + pattern;
 
+	// Both sensitivities pass their own options. Glob.Parse without options reads DotNet.Glob's static,
+	// mutable GlobOptions.Default, so a host that sets GlobOptions.Default.Evaluation.CaseInsensitive
+	// would otherwise turn TextFilter's case-sensitive globs case-insensitive.
+	private static readonly GlobOptions CaseSensitiveGlobOptions = new() { Evaluation = { CaseInsensitive = false } };
 	private static readonly GlobOptions CaseInsensitiveGlobOptions = new() { Evaluation = { CaseInsensitive = true } };
 
 	// Filter patterns are caller-supplied text, so a pattern with catastrophic backtracking would
@@ -841,7 +845,7 @@ public static partial class TextFilter
 					.Where(pattern => pattern.Length != 0)
 					.Select(pattern => caseSensitivity is TextFilterCaseSensitivity.CaseInsensitive
 						? Glob.Parse(pattern, CaseInsensitiveGlobOptions)
-						: Glob.Parse(pattern))];
+						: Glob.Parse(pattern, CaseSensitiveGlobOptions))];
 				globs = parsed is { Length: > 0 } ? parsed : null;
 			}
 			catch (Exception ex) when (ex is not OutOfMemoryException)
