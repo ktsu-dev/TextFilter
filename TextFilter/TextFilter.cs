@@ -523,8 +523,9 @@ public static partial class TextFilter
 	// DotNet.Glob only reads "**" as a wildcard when it is a whole path segment; joined to anything
 	// else, as in "**foo" or "a**b", it matches no characters at all, so a doubled star
 	// would empty the list where "*" matches. Outside a whole segment a run of stars means no more than
-	// one star does, so each such run is collapsed to "*". A whole-segment "**" ("**/x", "a/**") is left
-	// for ExpandGlobStarSegments, and stars inside a bracket class are members, so they are left too.
+	// one star does, so each such run is collapsed to "*". A whole-segment run ("**/x", "a/**") is capped at
+	// "**" and left for ExpandGlobStarSegments: a longer run such as "***/" would otherwise leave a stray "*"
+	// joined to the "**" and match nothing. Stars inside a bracket class are members, so they are left too.
 	internal static string CollapseJoinedGlobStars(string token)
 	{
 		if (!token.Contains("**", StringComparison.Ordinal))
@@ -564,7 +565,7 @@ public static partial class TextFilter
 			bool startsSegment = index == 0 || IsPathSeparator(token[index - 1]);
 			bool endsSegment = runEnd == token.Length || IsPathSeparator(token[runEnd]);
 			int runLength = runEnd - index;
-			result.Append('*', runLength > 1 && !(startsSegment && endsSegment) ? 1 : runLength);
+			result.Append('*', runLength > 1 && !(startsSegment && endsSegment) ? 1 : Math.Min(runLength, 2));
 			index = runEnd;
 		}
 
