@@ -734,7 +734,9 @@ public static partial class TextFilter
 	}
 
 	// A range that spans "/" or "\" is listed instead, so the separator in it is masked like any other
-	// literal one; left native, it would never contain the masked separator in the text ("[A-z]").
+	// literal one; left native, it would never contain the masked separator in the text ("[A-z]"). A
+	// range that spans the mask itself is listed too: left native, it would contain every masked
+	// separator in the text ("[ア-ｚ]" matching "/").
 	private static bool IsNativeGlobRange(string content) =>
 		content.Length == 3 && content[1] == '-' && content[0] != ']' && IsNativeGlobRange(content[0], content[2]);
 
@@ -743,7 +745,8 @@ public static partial class TextFilter
 		&& !SpansPathSeparator(first, last);
 
 	private static bool SpansPathSeparator(char first, char last) =>
-		(first <= '/' && '/' <= last) || (first <= '\\' && '\\' <= last);
+		(first <= '/' && '/' <= last) || (first <= '\\' && '\\' <= last)
+		|| (first <= MaskedPathSeparator && MaskedPathSeparator <= last);
 
 	// Reads the class members with the usual glob rules: a leading "]" and a leading or trailing "-" are
 	// literal, and "x-y" is an inclusive range.
@@ -766,6 +769,9 @@ public static partial class TextFilter
 		}
 	}
 
+	// The mask is left out of a range that merely passes over it, because after masking it stands for
+	// "/" and "\", which the range does not contain. A "/" or "\" that is a member is masked into the
+	// class anyway.
 	private static SortedSet<char> CollectGlobClassMembers(List<char> singles, List<(char First, char Last)> ranges)
 	{
 		SortedSet<char> members = [.. singles];
@@ -773,7 +779,10 @@ public static partial class TextFilter
 		{
 			for (int member = first; member <= last; member++)
 			{
-				members.Add((char)member);
+				if (member != MaskedPathSeparator || first == last)
+				{
+					members.Add((char)member);
+				}
 			}
 		}
 
