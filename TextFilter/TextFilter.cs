@@ -517,7 +517,23 @@ public static partial class TextFilter
 		}
 
 		string tail = maskedToken[start..];
-		return [.. expansions.Select(prefix => prefix + tail).Distinct(StringComparer.Ordinal)];
+		return [.. expansions.Select(prefix => ExpandTrailingGlobStar(prefix + tail)).Distinct(StringComparer.Ordinal)];
+	}
+
+	// A trailing whole-segment "**", as in "src/**", should match the empty remainder too, so that
+	// "dir/**" matches at least what "dir/*" does, "dir/" included. With the separator masked,
+	// DotNet.Glob reads it as "**" joined to a literal, which needs at least one more character. Since
+	// * already crosses the masked separator, a plain "*" means the same and also matches nothing.
+	private static string ExpandTrailingGlobStar(string expansion)
+	{
+		if (!expansion.EndsWith("**", StringComparison.Ordinal))
+		{
+			return expansion;
+		}
+
+		int globStarStart = expansion.Length - 2;
+		bool isWholeSegment = globStarStart == 0 || expansion[globStarStart - 1] == MaskedPathSeparator;
+		return isWholeSegment ? expansion[..globStarStart] + "*" : expansion;
 	}
 
 	// DotNet.Glob only reads "**" as a wildcard when it is a whole path segment; joined to anything
