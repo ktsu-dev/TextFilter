@@ -1424,7 +1424,45 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
-	[DataRow("x[**]", "x[**]")]
+	[DataRow("a/x.cs", "***/x.cs")]
+	[DataRow("x.cs", "***/x.cs")]
+	[DataRow("a/b", "***/b")]
+	[DataRow("a/b", "****/b")]
+	[DataRow("a/b", "*****/b")]
+	[DataRow("b", "*****/b")]
+	[DataRow("a/b/c", "a/***/c")]
+	[DataRow("a/c", "a/***/c")]
+	[DataRow("a/b/c", "a/*****/c")]
+	[DataRow("x.cs", "***x.cs")]
+	public void WholeSegmentStarRunMatchesLikeGlobStar(string text, string filter)
+	{
+		Assert.IsTrue(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+		Assert.IsTrue(TextFilter.IsMatch(text, filter));
+	}
+
+	[TestMethod]
+	[DataRow("a/y.cs", "***/x.cs")]
+	[DataRow("a/b/d", "a/***/c")]
+	public void WholeSegmentStarRunStillRequiresTheLiteral(string text, string filter)
+	{
+		Assert.IsFalse(TextFilter.IsMatch(text, filter, TextFilterType.Glob, TextFilterMatchOptions.ByWholeString));
+	}
+
+	[TestMethod]
+	public void WholeSegmentStarRunExclusionExcludesItems()
+	{
+		List<string> result = [.. TextFilter.Filter(["a/tmp", "a/keep"], "-***/tmp")];
+
+		Assert.AreEqual(1, result.Count);
+		Assert.AreEqual("a/keep", result[0]);
+	}
+
+	[TestMethod]
+	[DataRow("***/x.cs", "**/x.cs")]
+	[DataRow("a/*****/c", "a/**/c")]
+	[DataRow("***", "**")]
+	[DataRow("x[***]", "x[***]")]
+
 	[DataRow("x[!**]", "x[!**]")]
 	[DataRow("**/a", "**/a")]
 	[DataRow("a/**", "a/**")]
