@@ -688,33 +688,42 @@ public static partial class TextFilter
 			return [(negated ? "[!" : "[") + content + "]"];
 		}
 
+		if (IsReversedLetterRange(content))
+		{
+			return [negated ? "[!9-0]" : "[9-0]"];
+		}
+
 		List<char> singles = [];
 		List<(char First, char Last)> ranges = [];
 		ReadGlobClassMembers(content, singles, ranges);
 
 		long memberCount = singles.Count + ranges.Sum(range => Math.Max(0L, range.Last - range.First + 1L));
-		if (!negated && memberCount > MaxGlobClassMembers)
+		if (!negated && memberCount > MaxGlobClassMembers && SplitGlobClass(singles, ranges, maxPieces) is List<string> pieces)
 		{
-			// A reversed range has no members, so it adds no piece.
-			List<(char First, char Last)> listedRanges = [.. ranges.Where(range => range.First <= range.Last && !IsNativeGlobRange(range.First, range.Last))];
-			List<string> pieces = [.. ranges
-				.Where(range => range.First <= range.Last && IsNativeGlobRange(range.First, range.Last))
-				.Select(range => $"[{range.First}-{range.Last}]")
-				.Distinct(StringComparer.Ordinal)];
-
-			string? rest = ToGlobCharacterList(CollectGlobClassMembers(singles, listedRanges), negated: false);
-			if (rest is not null)
-			{
-				pieces.Add(rest);
-			}
-
-			if (pieces.Count <= maxPieces)
-			{
-				return pieces;
-			}
+			return pieces;
 		}
 
 		return ToGlobCharacterList(CollectGlobClassMembers(singles, ranges), negated) is string list ? [list] : null;
+	}
+
+	// Splits a large non-negated class into a piece per native range plus one listed piece for the rest,
+	// or returns null if that gives more than maxPieces pieces.
+	private static List<string>? SplitGlobClass(List<char> singles, List<(char First, char Last)> ranges, int maxPieces)
+	{
+		// A reversed range has no members, so it adds no piece.
+		List<(char First, char Last)> listedRanges = [.. ranges.Where(range => range.First <= range.Last && !IsNativeGlobRange(range.First, range.Last))];
+		List<string> pieces = [.. ranges
+			.Where(range => range.First <= range.Last && IsNativeGlobRange(range.First, range.Last))
+			.Select(range => $"[{range.First}-{range.Last}]")
+			.Distinct(StringComparer.Ordinal)];
+
+		string? rest = ToGlobCharacterList(CollectGlobClassMembers(singles, listedRanges), negated: false);
+		if (rest is not null)
+		{
+			pieces.Add(rest);
+		}
+
+		return pieces.Count <= maxPieces ? pieces : null;
 	}
 
 	// Returns the index of the "]" closing the class opened at "open", or -1 if it is never closed.
@@ -733,17 +742,27 @@ public static partial class TextFilter
 		return contentStart < token.Length ? token.IndexOf(']', contentStart + 1) : -1;
 	}
 
-	// A range that spans "/" or "\" is listed instead, so the separator in it is masked like any other
-	// literal one; left native, it would never contain the masked separator in the text ("[A-z]").
+	// A lone range is left for DotNet.Glob only when its endpoints are letters sharing a case (both upper,
+	// both lower, or both uncased) or are both digits. Under
+	// CaseInsensitive, DotNet.Glob lowercases the endpoints, which would turn the mixed-case "A-z" into
+	// "a-z" (losing "_" and "["), so a mixed-case range is listed by ToGlobCharacterList instead.
+	// A range that spans "/" or "\" is listed too, so the separator in it is masked like any other
+	// literal one; left native, it would never contain the masked separator in the text.
 	private static bool IsNativeGlobRange(string content) =>
 		content.Length == 3 && content[1] == '-' && content[0] != ']' && IsNativeGlobRange(content[0], content[2]);
 
 	private static bool IsNativeGlobRange(char first, char last) =>
-		((char.IsLetter(first) && char.IsLetter(last)) || (char.IsAsciiDigit(first) && char.IsAsciiDigit(last)))
+		((char.IsLetter(first) && char.IsLetter(last) && char.IsUpper(first) == char.IsUpper(last) && char.IsLower(first) == char.IsLower(last))
+			|| (char.IsAsciiDigit(first) && char.IsAsciiDigit(last)))
 		&& !SpansPathSeparator(first, last);
 
 	private static bool SpansPathSeparator(char first, char last) =>
 		(first <= '/' && '/' <= last) || (first <= '\\' && '\\' <= last);
+
+	// A lone reversed letter range, such as "a-Z", matches nothing, but DotNet.Glob would fold it to "a-z"
+	// under CaseInsensitive. It is written as a reversed digit range, which case folding leaves alone.
+	private static bool IsReversedLetterRange(string content) =>
+		content.Length == 3 && content[1] == '-' && char.IsLetter(content[0]) && char.IsLetter(content[2]) && content[0] > content[2];
 
 	// Reads the class members with the usual glob rules: a leading "]" and a leading or trailing "-" are
 	// literal, and "x-y" is an inclusive range.
