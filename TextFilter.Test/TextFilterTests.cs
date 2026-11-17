@@ -1198,6 +1198,41 @@ public class TextFilterTests
 	}
 
 	[TestMethod]
+	[DataRow("x/", "x[\u30A2-\uFF5A]", false)]
+	[DataRow("x/", "x[a-\uFF5A]", false)]
+	[DataRow("x\\", "x[a-\uFF5A]", false)]
+	[DataRow("x/", "x[!\u30A2-\uFF5A]", true)]
+	[DataRow("x/", "x[0-9a-\uFF5A]", false)]
+	[DataRow("x/", "x[!0-9a-\uFF5A]", true)]
+	[DataRow("x.", "x[\u30A2-\uFF5A]", false)]
+	[DataRow("x.", "x[!\u30A2-\uFF5A]", true)]
+	[DataRow("x\u30E1", "x[\u30A2-\uFF5A]", true)]
+	[DataRow("x\uE001", "x[\u30A2-\uFF5A]", true)]
+	[DataRow("x/", "x[!-0]", true)]
+	public void GlobClassRangeSpanningTheSeparatorMaskDoesNotMatchSeparators(string text, string pattern, bool expected)
+	{
+		// "/" and "\" are masked to U+E000 before DotNet.Glob sees them, so a range that passes over U+E000
+		// without containing "/" or "\" must not be read as containing them (#208). A range that does
+		// contain "/" still matches it.
+		foreach (TextFilterCaseSensitivity caseSensitivity in Enum.GetValues<TextFilterCaseSensitivity>())
+		{
+			Assert.AreEqual(expected, TextFilter.IsMatch(text, pattern, TextFilterType.Glob, TextFilterMatchOptions.ByWordAny, caseSensitivity), $"{pattern} against {text} ({caseSensitivity})");
+		}
+	}
+
+	[TestMethod]
+	public void GlobFilterWithARangeSpanningTheSeparatorMaskKeepsPathItems()
+	{
+		string[] items = ["docs/", "src/", "readme.md", "\u30E1\u30E2.txt", "\u30E1\u30E2"];
+
+		List<string> excluded = [.. TextFilter.Filter(items, "-*[\u30A1-\uFF5A]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString)];
+		List<string> included = [.. TextFilter.Filter(items, "*[\u30A1-\uFF5A]", TextFilterType.Glob, TextFilterMatchOptions.ByWholeString)];
+
+		CollectionAssert.AreEqual(new List<string> { "docs/", "src/", "readme.md", "\u30E1\u30E2.txt" }, excluded);
+		CollectionAssert.AreEqual(new List<string> { "\u30E1\u30E2" }, included);
+	}
+
+	[TestMethod]
 	[DataRow("[a]]", "[a][]]")]
 	[DataRow("[]]]", "[]][]]")]
 	[DataRow("*[[][0-9]]", "*[[][0-9][]]")]
