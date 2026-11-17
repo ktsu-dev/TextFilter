@@ -495,6 +495,7 @@ public static partial class TextFilter
 
 			string literal = maskedToken[start..index];
 			bool expandBothWays = expanded < MaxExpandedGlobStarSegments;
+			bool doubled = false;
 			List<string> next = new(expansions.Count * 2);
 
 			foreach (string prefix in expansions)
@@ -507,11 +508,18 @@ public static partial class TextFilter
 				if (expandBothWays && (before.Length == 0 || before[^1] == MaskedPathSeparator))
 				{
 					next.Add(before);
+					doubled = true;
 				}
 			}
 
+			// Only a "**/" that actually added a zero-segment form counts against the cap, so ones
+			// joined to a literal don't use it up before a later whole-segment "**/" is reached.
 			expansions = next;
-			expanded++;
+			if (doubled)
+			{
+				expanded++;
+			}
+
 			start = index + MaskedGlobStarSegment.Length;
 			searchFrom = start;
 		}
